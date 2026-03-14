@@ -1,0 +1,33 @@
+<main class="contenedor">
+  <h1>Estética Canina</h1>
+  
+  <div class="formulario">
+    <h3>Registrar Perrito</h3>
+    <input type="text" placeholder="Nombre del perrito" [(ngModel)]="servicioActual.nombrePerro">
+    <input type="text" placeholder="Tipo de servicio" [(ngModel)]="servicioActual.tipoServicio">
+    <input type="number" placeholder="Precio ($)" [(ngModel)]="servicioActual.precio">
+    
+    <div class="grupo-botones">
+      <button (click)="guardar()">Agregar</button>
+      <button (click)="filtrarCaros()" style="background: #f39c12;">Ver > $200</button>
+      <button (click)="verTodo()" style="background: #7f8c8d;">Ver Todo</button>
+    </div>
+  </div>
+
+  <div class="lista">
+    @for (item of listaServicios; track item.id){
+      <div class="tarjeta-perro">
+        <p><strong>Nombre:</strong> {{item.nombrePerro}}</p>
+        <p><strong>Servicio:</strong> {{item.tipoServicio}}</p>
+        <p><strong>Precio:</strong> ${{item.precio}}</p>
+        <button (click)="eliminar(item.id)" style="background: red;">Eliminar</button>
+      </div>
+    } @empty {
+      <p>No hay servicios registrados.</p>
+    }
+  </div>
+
+  <div class="resumen">
+    <h3>Total en caja: ${{ obtenerTotal() }}</h3>
+  </div>
+</main>
