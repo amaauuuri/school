@@ -1,0 +1,111 @@
+:host {
+    display: block;
+    background-color: #f4f7f6; 
+    min-height: 100vh;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.contenedor {
+    max-width: 900px;
+    margin: 0 auto;
+    color: #2c3e50;
+}
+
+
+
+.formulario {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.formulario h3 {
+    width: 100%;
+    margin: 0 0 10px 0;
+    color: #7f8c8d;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+input {
+    padding: 12px 15px;
+    border: 1px solid #dcdde1;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    transition: 0.3s;
+}
+
+input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+.lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.tarjeta-perro {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    border-top: 5px solid #3498db;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: 0.3s;
+    position: relative;
+}
+
+.tarjeta-perro:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.tarjeta-perro h4 {
+    margin: 0 0 10px 0;
+    font-size: 1.3rem;
+    color: #2c3e50;
+}
+
+.conversion {
+    background: #ebf5fb;
+    padding: 10px;
+    border-radius: 6px;
+    color: #2980b9;
+    font-weight: 600;
+    margin: 15px 0;
+}
+
+.grupo-botones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+button:active { transform: scale(0.95); }
+
+button:first-child { background: #3498db; color: white; } 
+button:nth-child(2) { background: #2ecc71; color: white; } 
+button[style*="background: #e67e22"] { color: white; }     
+button[style*="background: #e74c3c"] { color: white; }      
+
+button:hover { opacity: 0.9; }
