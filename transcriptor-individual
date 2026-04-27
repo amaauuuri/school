@@ -1,0 +1,57 @@
+TRANSCRIPTOR RÁPIDO EXPANDO v2.0
+Introduce el nombre exacto del archivo que subiste a Drive:
+
+Nombre_del_Audio = "Ingenieria 19 Febrero.m4a" #@param {type:"string"}
+
+import os
+
+# --- 1. PREPARACIÓN DEL ENTORNO (Funciona en cualquier PC) ---
+try:
+    import whisper
+except ImportError:
+    print("📦 Instalando Whisper por primera vez en esta máquina... (Espera un momento)")
+    !pip install openai-whisper
+    !apt install ffmpeg
+    import whisper
+
+from google.colab import drive
+
+# --- 2. MONTAJE DE DRIVE ---
+if not os.path.exists('/content/drive'):
+    drive.mount('/content/drive')
+
+def ejecutar_transcripcion():
+    # --- 3. RUTAS ---
+    input_path = f"/content/drive/MyDrive/Whisper/Grabaciones_Clase/{Nombre_del_Audio}"
+    output_dir = f"/content/drive/MyDrive/Whisper/Transcripciones_Finales/"
+
+    # Verificar si existe la carpeta de salida, si no, crearla
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    if not os.path.exists(input_path):
+        print(f"❌ ERROR: No encontré '{Nombre_del_Audio}' en la carpeta Grabaciones_Clase.")
+        print(f"Ruta buscada: {input_path}")
+        return
+
+    print(f"🚀 Procesando: {Nombre_del_Audio}...")
+    print("💡 Tip: El modelo 'medium' en computadoras de escuela (CPU) puede tardar. Si se traba, usa el modelo 'base'.")
+
+    # Cargamos el modelo
+    model = whisper.load_model("medium")
+
+    # Transcripción
+    result = model.transcribe(input_path, language="es")
+
+    # --- 4. GUARDADO ---
+    nombre_base = os.path.splitext(Nombre_del_Audio)[0]
+    nombre_txt = f"{nombre_base}.txt"
+    ruta_final = os.path.join(output_dir, nombre_txt)
+
+    with open(ruta_final, "w", encoding="utf-8") as f:
+        f.write(result["text"])
+
+    print(f"✅ ¡TERMINADO! Archivo guardado en Transcripciones_Finales como: {nombre_txt}")
+
+# Ejecutar proceso
+ejecutar_transcripcion()
