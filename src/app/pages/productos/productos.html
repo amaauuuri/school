@@ -1,0 +1,52 @@
+<div class="p-4">
+
+    <h2 class="mb-4">
+        Productos
+    </h2>
+
+    <table class="table table-bordered table-hover">
+
+        <thead class="table-dark">
+
+            <tr>
+                <th>Nombre</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Acciones</th>
+            </tr>
+
+        </thead>
+
+<tbody>
+
+    <tr *ngFor="let producto of productosService.productos">
+
+        <td>
+            {{ producto.nombre }}
+        </td>
+
+        <td>
+            ${{ producto.precio }}
+        </td>
+
+        <td>
+            {{ producto.stock }}
+        </td>
+
+        <td>
+
+            <button
+                class="btn btn-danger btn-sm"
+                (click)="eliminarProducto(producto.id!)"
+            >
+                Eliminar
+            </button>
+
+        </td>
+
+    </tr>
+
+</tbody>
+    </table>
+
+</div>
