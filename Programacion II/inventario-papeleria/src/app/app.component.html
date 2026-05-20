@@ -1,0 +1,27 @@
+<main class="contenedor">
+  <h1>Inventario Papelería</h1>
+
+  <div class="formulario">
+    <h3>Registrar Nuevo Artículo</h3>
+    <input type="text" [(ngModel)]="nuevoProd.nombre" placeholder="ARTICULO">
+    <input type="number" [(ngModel)]="nuevoProd.piezasPorCaja" placeholder="PIEZAS DE CAJA">
+    <button (click)="registrar()">Registrar</button>
+  </div>
+
+  <div class="lista">
+    @for (p of productos; track p.id) {
+      <div class="tarjeta-perro">
+        <h4>{{ p.nombre }}</h4>
+        <p>Stock: <strong>{{ p.stockPiezas }} piezas</strong></p>
+        <p class="conversion"> {{ getCajas(p) }} cajas + {{ getSueltas(p) }} sueltas</p>
+        
+        <div class="grupo-botones">
+          <button (click)="ajustar(p.id, p.piezasPorCaja, false, true)">+1 Pieza</button>
+          <button (click)="ajustar(p.id, p.piezasPorCaja, true, true)">+1 Caja</button>
+          <button (click)="ajustar(p.id, p.piezasPorCaja, false, false)" style="background: #e67e22">-1 Pieza</button>
+          <button (click)="borrar(p.id)" style="background: #e74c3c">Borrar</button>
+        </div>
+      </div>
+    }
+  </div>
+</main>
