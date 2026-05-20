@@ -1,8 +1,8 @@
 # PapeleriaProyecto
 
-Integrantes del equipo: 
-Romero Ramos Alan - 22221026
-Prisco romero angel  - 24222015
+## Integrantes del equipo:
+Romero Ramos Alan - 22221026 \
+Prisco romero angel  - 24222015 \
 Karol Amauri Garcia Guevara - 23221071
 
 ## Development server
