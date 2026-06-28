@@ -1,6 +1,9 @@
 # PapeleriaProyecto
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.3.
+## Integrantes del equipo:
+Romero Ramos Alan - 22221026 \
+Prisco romero angel  - 24222015 \
+Karol Amauri Garcia Guevara - 23221071
 
 ## Development server
 
