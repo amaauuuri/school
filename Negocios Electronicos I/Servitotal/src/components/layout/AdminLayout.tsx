@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { config } = useServitotalStore();
+  useServitotalStore();
   const { logout } = useAuth();
 
   const handleLogout = async (e: React.MouseEvent) => {
@@ -33,8 +33,7 @@ export function AdminSidebar() {
           Servitotal
         </Link>
         <div className="dashboard-sidebar__restaurant">
-          Admin · {config.name}
-        </div>
+          Admin · Panel        </div>
       </div>
 
       <nav className="dashboard-sidebar__nav">
@@ -42,11 +41,10 @@ export function AdminSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`dashboard-sidebar__link ${
-              pathname.startsWith(item.href)
-                ? "dashboard-sidebar__link--active"
-                : ""
-            }`}
+            className={`dashboard-sidebar__link ${pathname.startsWith(item.href)
+              ? "dashboard-sidebar__link--active"
+              : ""
+              }`}
           >
             <span className="dashboard-sidebar__link-icon">{item.icon}</span>
             {item.label}

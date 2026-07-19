@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { config } = useServitotalStore();
+  useServitotalStore();
   const { logout, profile } = useAuth();
 
   const handleLogout = async (e: React.MouseEvent) => {
@@ -32,19 +32,17 @@ export function DashboardSidebar() {
           <span className="public-header__logo-icon">S</span>
           Servitotal
         </Link>
-        <div className="dashboard-sidebar__restaurant">{config.name}</div>
-      </div>
+        <div className="dashboard-sidebar__restaurant">Servitotal</div>      </div>
 
       <nav className="dashboard-sidebar__nav">
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`dashboard-sidebar__link ${
-              pathname.startsWith(item.href)
+            className={`dashboard-sidebar__link ${pathname.startsWith(item.href)
                 ? "dashboard-sidebar__link--active"
                 : ""
-            }`}
+              }`}
           >
             <span className="dashboard-sidebar__link-icon">{item.icon}</span>
             {item.label}
