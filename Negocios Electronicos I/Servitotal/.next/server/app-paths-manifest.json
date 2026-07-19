@@ -1,3 +1,15 @@
 {
-  "/page": "app/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/configuracion/page": "app/admin/configuracion/page.js",
+  "/admin/menu/page": "app/admin/menu/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/admin/reportes/page": "app/admin/reportes/page.js",
+  "/dashboard/caja/page": "app/dashboard/caja/page.js",
+  "/dashboard/mesas/page": "app/dashboard/mesas/page.js",
+  "/dashboard/ordenes/page": "app/dashboard/ordenes/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/precios/page": "app/precios/page.js",
+  "/registro/page": "app/registro/page.js"
 }

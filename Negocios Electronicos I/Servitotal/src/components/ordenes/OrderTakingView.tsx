@@ -1,42 +1,134 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import {
-  CATEGORY_LABELS,
-  formatCurrency,
-  useServitotalStore,
-} from "@/lib/store";
-import type { MenuCategory } from "@/lib/types";
+import { CATEGORY_LABELS, formatCurrency, useServitotalStore } from "@/lib/store";
+import { useFirestore } from "@/lib/FirestoreContext";
+import { useAuth } from "@/lib/AuthContext";
+import type { GlobalOrder, MenuCategory, MenuItem, OrderItem } from "@/lib/types";
 
 const CATEGORIES: MenuCategory[] = ["alimentos", "bebidas", "postres"];
 
-export function OrderTakingView() {
-  const [activeCategory, setActiveCategory] =
-    useState<MenuCategory>("alimentos");
-  const {
-    menu,
-    tables,
-    activeTableId,
-    setActiveTableId,
-    addItemToTable,
-    removeItemFromTable,
-    updateItemQuantity,
-    updateTableStatus,
-  } = useServitotalStore();
+/** Convert Firestore OrderItems → display-friendly cart lines */
+function toCartLines(items: OrderItem[]) {
+  return items.map((i) => ({
+    platilloId: i.platilloId,
+    nombre: i.nombre,
+    cantidad: i.cantidad,
+    precioUnitario: i.precioUnitario,
+    notas: i.notas ?? "",
+  }));
+}
 
-  const activeTable = tables.find((t) => t.id === activeTableId);
+export function OrderTakingView() {
+  const [activeCategory, setActiveCategory] = useState<MenuCategory>("alimentos");
+  const [saving, setSaving] = useState(false);
+
+  const { activeTableId, setActiveTableId } = useServitotalStore();
+  const { menu, activeOrders, createOrder, updateOrderItems, updateOrderStatus, restaurantConfig } =
+    useFirestore();
+  const { user } = useAuth();
+
+  // The mesaNumero is stored as a string in activeTableId
+  const mesaNumero = activeTableId ? parseInt(activeTableId, 10) : null;
+
+  // Find the active (non-paid) order for this table
+  const activeOrder: GlobalOrder | undefined = mesaNumero
+    ? activeOrders.find((o) => o.mesaNumero === mesaNumero && o.status !== "pagado")
+    : undefined;
+
+  // Local cart mirrors the Firestore order items
+  const [cart, setCart] = useState<OrderItem[]>(activeOrder?.items ?? []);
+
+  // Sync cart when the active order changes externally (real-time)
+  const prevOrderId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (activeOrder && activeOrder.id !== prevOrderId.current) {
+      setCart(activeOrder.items);
+      prevOrderId.current = activeOrder.id;
+    }
+    if (!activeOrder) {
+      setCart([]);
+      prevOrderId.current = undefined;
+    }
+  }, [activeOrder]);
+
   const filteredMenu = menu.filter(
     (item) => item.category === activeCategory && item.available
   );
 
-  function handleSendToPay() {
-    if (activeTableId) {
-      updateTableStatus(activeTableId, "por_pagar");
+  // ─── Cart helpers ──────────────────────────────────────────────────────────
+
+  function addItem(item: MenuItem) {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.platilloId === item.id);
+      if (existing) {
+        return prev.map((c) =>
+          c.platilloId === item.id ? { ...c, cantidad: c.cantidad + 1 } : c
+        );
+      }
+      return [
+        ...prev,
+        {
+          platilloId: item.id,
+          nombre: item.name,
+          cantidad: 1,
+          precioUnitario: item.price,
+          notas: "",
+        },
+      ];
+    });
+  }
+
+  function removeItem(platilloId: string) {
+    setCart((prev) => prev.filter((c) => c.platilloId !== platilloId));
+  }
+
+  function changeQuantity(platilloId: string, delta: number) {
+    setCart((prev) => {
+      const updated = prev.map((c) =>
+        c.platilloId === platilloId ? { ...c, cantidad: c.cantidad + delta } : c
+      );
+      return updated.filter((c) => c.cantidad > 0);
+    });
+  }
+
+  // ─── Firestore save ────────────────────────────────────────────────────────
+
+  async function handleSaveOrder() {
+    if (!mesaNumero || cart.length === 0 || !user) return;
+    setSaving(true);
+    try {
+      if (activeOrder) {
+        await updateOrderItems(activeOrder.id, cart);
+      } else {
+        await createOrder(mesaNumero, cart, user.uid);
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
-  if (!activeTable) {
+  async function handleSendToPay() {
+    if (!mesaNumero || cart.length === 0 || !user) return;
+    setSaving(true);
+    try {
+      if (activeOrder) {
+        // First persist current cart, then set to por_pagar
+        await updateOrderItems(activeOrder.id, cart);
+        await updateOrderStatus(activeOrder.id, "por_pagar");
+      } else {
+        const newId = await createOrder(mesaNumero, cart, user.uid);
+        await updateOrderStatus(newId, "por_pagar");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const cartTotal = cart.reduce((s, i) => s + i.precioUnitario * i.cantidad, 0);
+
+  if (!mesaNumero) {
     return (
       <div className="empty-state">
         <div className="empty-state__icon">🪑</div>
@@ -48,6 +140,7 @@ export function OrderTakingView() {
 
   return (
     <div className="menu-layout">
+      {/* ── Left: menu + table selector ───────────────────────────────────── */}
       <div>
         <div
           style={{
@@ -58,16 +151,16 @@ export function OrderTakingView() {
             flexWrap: "wrap",
           }}
         >
-          <h2 style={{ fontWeight: 600 }}>Mesa {activeTable.number}</h2>
+          <h2 style={{ fontWeight: 600 }}>Mesa {mesaNumero}</h2>
           <select
             className="form-select"
             style={{ width: "auto" }}
             value={activeTableId ?? ""}
             onChange={(e) => setActiveTableId(e.target.value)}
           >
-            {tables.map((t) => (
-              <option key={t.id} value={t.id}>
-                Mesa {t.number}
+            {Array.from({ length: restaurantConfig?.tableCount ?? 12 }, (_, i) => (
+              <option key={i + 1} value={String(i + 1)}>
+                Mesa {i + 1}
               </option>
             ))}
           </select>
@@ -78,9 +171,7 @@ export function OrderTakingView() {
             <button
               key={cat}
               type="button"
-              className={`category-tab ${
-                activeCategory === cat ? "category-tab--active" : ""
-              }`}
+              className={`category-tab ${activeCategory === cat ? "category-tab--active" : ""}`}
               onClick={() => setActiveCategory(cat)}
             >
               {CATEGORY_LABELS[cat]}
@@ -94,7 +185,7 @@ export function OrderTakingView() {
               key={item.id}
               type="button"
               className="menu-item-card"
-              onClick={() => addItemToTable(activeTable.id, item)}
+              onClick={() => addItem(item)}
             >
               <div className="menu-item-card__name">{item.name}</div>
               <div className="menu-item-card__desc">{item.description}</div>
@@ -109,22 +200,19 @@ export function OrderTakingView() {
         </div>
       </div>
 
+      {/* ── Right: cart ───────────────────────────────────────────────────── */}
       <aside className="order-cart">
-        <div className="order-cart__header">
-          Orden · Mesa {activeTable.number}
-        </div>
+        <div className="order-cart__header">Orden · Mesa {mesaNumero}</div>
         <div className="order-cart__body">
-          {activeTable.order.length === 0 ? (
-            <div className="order-cart__empty">
-              Agrega platillos del menú
-            </div>
+          {cart.length === 0 ? (
+            <div className="order-cart__empty">Agrega platillos del menú</div>
           ) : (
-            activeTable.order.map((line) => (
-              <div key={line.id} className="order-line">
+            cart.map((line) => (
+              <div key={line.platilloId} className="order-line">
                 <div className="order-line__info">
-                  <div className="order-line__name">{line.name}</div>
+                  <div className="order-line__name">{line.nombre}</div>
                   <div className="order-line__price">
-                    {formatCurrency(line.price)} c/u
+                    {formatCurrency(line.precioUnitario)} c/u
                   </div>
                 </div>
                 <div className="order-line__qty">
@@ -132,28 +220,18 @@ export function OrderTakingView() {
                     type="button"
                     className="qty-btn"
                     onClick={() =>
-                      line.quantity > 1
-                        ? updateItemQuantity(
-                            activeTable.id,
-                            line.id,
-                            line.quantity - 1
-                          )
-                        : removeItemFromTable(activeTable.id, line.id)
+                      line.cantidad > 1
+                        ? changeQuantity(line.platilloId, -1)
+                        : removeItem(line.platilloId)
                     }
                   >
                     −
                   </button>
-                  <span>{line.quantity}</span>
+                  <span>{line.cantidad}</span>
                   <button
                     type="button"
                     className="qty-btn"
-                    onClick={() =>
-                      updateItemQuantity(
-                        activeTable.id,
-                        line.id,
-                        line.quantity + 1
-                      )
-                    }
+                    onClick={() => changeQuantity(line.platilloId, 1)}
                   >
                     +
                   </button>
@@ -162,11 +240,28 @@ export function OrderTakingView() {
             ))
           )}
         </div>
-        {activeTable.order.length > 0 && (
+
+        {cart.length > 0 && (
           <div className="order-cart__footer">
-            <Button variant="primary" block onClick={handleSendToPay}>
-              Enviar a caja
-            </Button>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+                fontWeight: 600,
+              }}
+            >
+              <span>Total</span>
+              <span>{formatCurrency(cartTotal)}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <Button variant="outline" block onClick={handleSaveOrder} disabled={saving}>
+                {saving ? "Guardando..." : "Guardar orden"}
+              </Button>
+              <Button variant="primary" block onClick={handleSendToPay} disabled={saving}>
+                {saving ? "..." : "Enviar a caja"}
+              </Button>
+            </div>
           </div>
         )}
       </aside>

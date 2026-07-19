@@ -23,6 +23,8 @@ export interface UserProfile {
   restaurantName: string;
   role: "ADMIN" | "STAFF";
   createdAt: string;
+  /** For STAFF accounts: the admin owner's UID (= restaurantId in Firestore) */
+  restaurantId?: string;
 }
 
 interface AuthContextType {
@@ -143,11 +145,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Create Staff Account (Admin creates it for their restaurant)
   const createStaffAccount = async (name: string, email: string, password: string) => {
-    if (!profile || profile.role !== "ADMIN") {
+    if (!profile || profile.role !== "ADMIN" || !user) {
       throw new Error("Solo los administradores pueden crear cuentas de personal.");
     }
 
     const restaurantName = profile.restaurantName;
+    // The admin's UID IS the restaurantId in Firestore
+    const restaurantId = user.uid;
 
     // Use a secondary App instance to avoid logging out the current admin
     let secondaryApp;
@@ -169,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         restaurantName,
         role: "STAFF",
         createdAt: new Date().toISOString(),
+        restaurantId, // ← link staff to the admin's restaurant
       };
 
       // Save STAFF profile to firestore using the primary db client

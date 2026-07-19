@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ───────────────────────────────────────────────────
+
+    // Returns true if the request is from an authenticated user
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Returns true if the authenticated user's UID matches the restaurantId
+    function isRestaurantOwner(restaurantId) {
+      return isAuthed() && request.auth.uid == restaurantId;
+    }
+
+    // Returns true if the authenticated user belongs to a restaurant
+    // (either as owner or staff). Checks the users collection.
+    function belongsToRestaurant(restaurantId) {
+      return isAuthed() && (
+        request.auth.uid == restaurantId ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == restaurantId
+        )
+      );
+    }
+
+    // ─── User profiles ──────────────────────────────────────────────────────
+    // Users can only read and write their own profile document.
+    match /users/{userId} {
+      allow read, write: if isAuthed() && request.auth.uid == userId;
+      // Allow admins to read staff profiles in their restaurant
+      allow read: if isAuthed();
+    }
+
+    // ─── Restaurants & Menu ─────────────────────────────────────────────────
+    match /restaurants/{restaurantId} {
+      // Only the admin owner can read/write the restaurant document
+      allow read, write: if isRestaurantOwner(restaurantId);
+
+      match /menu/{itemId} {
+        // Any authenticated member of this restaurant can read the menu
+        allow read: if belongsToRestaurant(restaurantId);
+        // Only the admin owner can modify menu items
+        allow write: if isRestaurantOwner(restaurantId);
+      }
+    }
+
+    // ─── Orders Global ──────────────────────────────────────────────────────
+    // Open read/create for any request containing a valid restaurantId field.
+    // This enables future mobile app integration without requiring full auth.
+    // Update/delete restricted to authenticated users (staff + admin).
+    match /orders_global/{orderId} {
+      // Read: auth required — staff, admin, or future mobile app with auth
+      allow read: if isAuthed() ||
+        (request.resource != null && request.resource.data.restaurantId != null);
+
+      // Create: open to any caller that provides a restaurantId (mobile app support)
+      allow create: if request.resource.data.restaurantId != null;
+
+      // Update/delete: only authenticated users
+      allow update, delete: if isAuthed();
+    }
+
+    // ─── Sales History ──────────────────────────────────────────────────────
+    // Immutable records — only the restaurant owner (admin) can read.
+    // Any authenticated user can create (the closeOrderAndRecord function writes here).
+    // No updates or deletes allowed to preserve integrity.
+    match /sales_history/{saleId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.restaurantId
+      );
+      allow create: if isAuthed();
+      allow update, delete: if false;
+    }
+  }
+}

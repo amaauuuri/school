@@ -3,18 +3,20 @@
 import { DashboardShell } from "@/components/layout/DashboardLayout";
 import { TableGrid } from "@/components/mesas/TableGrid";
 import { Badge } from "@/components/ui/Badge";
-import { useServitotalStore } from "@/lib/store";
+import { useFirestore } from "@/lib/FirestoreContext";
 
 export default function MesasPage() {
-  const { tables } = useServitotalStore();
-  const occupied = tables.filter((t) => t.status !== "disponible").length;
+  const { activeOrders, restaurantConfig } = useFirestore();
+  const tableCount = restaurantConfig?.tableCount ?? 0;
+  // A table is "occupied" if it has any non-paid active order
+  const occupied = new Set(activeOrders.map((o) => o.mesaNumero)).size;
 
   return (
     <DashboardShell
       title="Mapa de Mesas"
       actions={
         <Badge variant="neutral">
-          {occupied} / {tables.length} activas
+          {occupied} / {tableCount} activas
         </Badge>
       }
     >

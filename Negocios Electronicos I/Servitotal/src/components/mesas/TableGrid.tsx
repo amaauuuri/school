@@ -2,12 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
-import {
-  STATUS_LABELS,
-  formatCurrency,
-  useServitotalStore,
-} from "@/lib/store";
-import type { Table, TableStatus } from "@/lib/types";
+import { STATUS_LABELS, formatCurrency, useServitotalStore } from "@/lib/store";
+import { useFirestore } from "@/lib/FirestoreContext";
+import type { TableStatus } from "@/lib/types";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function statusBadgeVariant(
   status: TableStatus
@@ -17,18 +16,30 @@ function statusBadgeVariant(
   return "danger";
 }
 
-interface TableCardProps {
-  table: Table;
-  selected: boolean;
-  onSelect: (table: Table) => void;
+/** Derive a TableStatus from the order status on that table */
+function orderStatusToTableStatus(orderStatus: string): TableStatus {
+  if (orderStatus === "por_pagar") return "por_pagar";
+  return "ocupada";
 }
 
-export function TableCard({ table, selected, onSelect }: TableCardProps) {
-  const subtotal = table.order.reduce(
-    (sum, l) => sum + l.price * l.quantity,
-    0
-  );
+// ─── Derived table type (from live orders) ────────────────────────────────────
 
+interface DerivedTable {
+  mesaNumero: number;
+  status: TableStatus;
+  totalAmount: number;
+  orderId: string | null;
+}
+
+// ─── TableCard ────────────────────────────────────────────────────────────────
+
+interface TableCardProps {
+  table: DerivedTable;
+  selected: boolean;
+  onSelect: (table: DerivedTable) => void;
+}
+
+function TableCard({ table, selected, onSelect }: TableCardProps) {
   return (
     <button
       type="button"
@@ -37,32 +48,56 @@ export function TableCard({ table, selected, onSelect }: TableCardProps) {
       }`}
       onClick={() => onSelect(table)}
     >
-      <span className="table-card__number">Mesa {table.number}</span>
+      <span className="table-card__number">Mesa {table.mesaNumero}</span>
       <Badge variant={statusBadgeVariant(table.status)}>
         {STATUS_LABELS[table.status]}
       </Badge>
-      <span className="table-card__capacity">
-        {table.capacity} personas
-      </span>
-      {table.order.length > 0 && (
+      {table.totalAmount > 0 && (
         <span className="text-sm" style={{ fontWeight: 600 }}>
-          {formatCurrency(subtotal)}
+          {formatCurrency(table.totalAmount)}
         </span>
       )}
     </button>
   );
 }
 
+// ─── TableGrid ────────────────────────────────────────────────────────────────
+
 export function TableGrid() {
   const router = useRouter();
-  const { tables, activeTableId, setActiveTableId, openTable } =
-    useServitotalStore();
+  const { activeTableId, setActiveTableId } = useServitotalStore();
+  const { activeOrders, restaurantConfig, loadingData } = useFirestore();
 
-  function handleSelect(table: Table) {
-    setActiveTableId(table.id);
-    if (table.status === "disponible") {
-      openTable(table.id);
+  const tableCount = restaurantConfig?.tableCount ?? 12;
+
+  // Build an index of mesaNumero → active order
+  const orderByTable = new Map<number, (typeof activeOrders)[0]>();
+  activeOrders.forEach((o) => {
+    // Keep the most-recent order if a table somehow has multiples
+    if (!orderByTable.has(o.mesaNumero) || o.createdAt > (orderByTable.get(o.mesaNumero)?.createdAt ?? "")) {
+      orderByTable.set(o.mesaNumero, o);
     }
+  });
+
+  // Generate all tables — status derived from orders
+  const tables: DerivedTable[] = Array.from({ length: tableCount }, (_, i) => {
+    const n = i + 1;
+    const order = orderByTable.get(n);
+    return {
+      mesaNumero: n,
+      status: order ? orderStatusToTableStatus(order.status) : "disponible",
+      totalAmount: order?.totalAmount ?? 0,
+      orderId: order?.id ?? null,
+    };
+  });
+
+  // Active table (identified by mesaNumero stored as string key)
+  const activeTable = activeTableId
+    ? tables.find((t) => String(t.mesaNumero) === activeTableId)
+    : null;
+
+  function handleSelect(table: DerivedTable) {
+    setActiveTableId(String(table.mesaNumero));
   }
 
   function handleGoToOrders() {
@@ -73,10 +108,17 @@ export function TableGrid() {
     if (activeTableId) router.push("/dashboard/caja");
   }
 
-  const activeTable = tables.find((t) => t.id === activeTableId);
+  if (loadingData) {
+    return (
+      <div style={{ padding: "2rem", color: "var(--color-text-muted)", textAlign: "center" }}>
+        Cargando mesas...
+      </div>
+    );
+  }
 
   return (
     <>
+      {/* Legend */}
       <div className="legend">
         <div className="legend__item">
           <span className="legend__dot legend__dot--disponible" />
@@ -95,9 +137,9 @@ export function TableGrid() {
       <div className="table-grid">
         {tables.map((table) => (
           <TableCard
-            key={table.id}
+            key={table.mesaNumero}
             table={table}
-            selected={activeTableId === table.id}
+            selected={activeTableId === String(table.mesaNumero)}
             onSelect={handleSelect}
           />
         ))}
@@ -106,13 +148,21 @@ export function TableGrid() {
       {activeTable && (
         <div
           className="card card--elevated"
-          style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}
+          style={{
+            marginTop: "1.5rem",
+            display: "flex",
+            gap: "1rem",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
           <div>
-            <strong>Mesa {activeTable.number}</strong>
+            <strong>Mesa {activeTable.mesaNumero}</strong>
             <span className="text-muted text-sm" style={{ marginLeft: "0.75rem" }}>
-              {STATUS_LABELS[activeTable.status]} · {activeTable.order.length}{" "}
-              ítems
+              {STATUS_LABELS[activeTable.status]}
+              {activeTable.totalAmount > 0 &&
+                ` · ${formatCurrency(activeTable.totalAmount)}`}
             </span>
           </div>
           <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -122,7 +172,7 @@ export function TableGrid() {
             >
               Tomar orden
             </button>
-            {activeTable.order.length > 0 && (
+            {activeTable.status !== "disponible" && (
               <button
                 className="btn btn--primary btn--sm"
                 onClick={handleGoToCash}

@@ -3,11 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import {
-  CATEGORY_LABELS,
-  formatCurrency,
-  useServitotalStore,
-} from "@/lib/store";
+import { CATEGORY_LABELS, formatCurrency } from "@/lib/store";
+import { useFirestore } from "@/lib/FirestoreContext";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 
 const EMPTY_FORM = {
@@ -19,11 +16,15 @@ const EMPTY_FORM = {
 };
 
 export function MenuManagementView() {
-  const { menu, addMenuItem, updateMenuItem, deleteMenuItem } =
-    useServitotalStore();
+  const { menu, addMenuItem, updateMenuItem, deleteMenuItem, loadingData } =
+    useFirestore();
+
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
   function openCreate() {
     setEditingId(null);
@@ -43,32 +44,61 @@ export function MenuManagementView() {
     setModalOpen(true);
   }
 
-  function handleSave() {
-    const price = parseFloat(form.price);
-    if (!form.name || isNaN(price)) return;
-
-    if (editingId) {
-      updateMenuItem(editingId, {
-        name: form.name,
-        description: form.description,
-        price,
-        category: form.category,
-        available: form.available,
-      });
-    } else {
-      addMenuItem({
-        name: form.name,
-        description: form.description,
-        price,
-        category: form.category,
-        available: form.available,
-      });
-    }
-    setModalOpen(false);
+  function openDeleteConfirm(item: MenuItem) {
+    setDeletingItem(item);
+    setDeleteModalOpen(true);
   }
 
-  function toggleAvailability(item: MenuItem) {
-    updateMenuItem(item.id, { available: !item.available });
+  async function handleSave() {
+    const price = parseFloat(form.price);
+    if (!form.name || isNaN(price)) return;
+    setSaving(true);
+    try {
+      if (editingId) {
+        await updateMenuItem(editingId, {
+          name: form.name,
+          description: form.description,
+          price,
+          category: form.category,
+          available: form.available,
+        });
+      } else {
+        await addMenuItem({
+          name: form.name,
+          description: form.description,
+          price,
+          category: form.category,
+          available: form.available,
+        });
+      }
+      setModalOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deletingItem) return;
+    setSaving(true);
+    try {
+      await deleteMenuItem(deletingItem.id);
+      setDeleteModalOpen(false);
+      setDeletingItem(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleAvailability(item: MenuItem) {
+    await updateMenuItem(item.id, { available: !item.available });
+  }
+
+  if (loadingData) {
+    return (
+      <div style={{ padding: "2rem", color: "var(--color-text-muted)", textAlign: "center" }}>
+        Cargando menú...
+      </div>
+    );
   }
 
   return (
@@ -114,18 +144,10 @@ export function MenuManagementView() {
                 </td>
                 <td>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEdit(item)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                       Editar
                     </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => deleteMenuItem(item.id)}
-                    >
+                    <Button variant="danger" size="sm" onClick={() => openDeleteConfirm(item)}>
                       Eliminar
                     </Button>
                   </div>
@@ -136,17 +158,18 @@ export function MenuManagementView() {
         </table>
       </div>
 
+      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingId ? "Editar platillo" : "Nuevo platillo"}
         footer={
           <>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button variant="primary" onClick={handleSave}>
-              Guardar
+            <Button variant="primary" onClick={handleSave} disabled={saving}>
+              {saving ? "Guardando..." : "Guardar"}
             </Button>
           </>
         }
@@ -165,9 +188,7 @@ export function MenuManagementView() {
             <textarea
               className="form-textarea"
               value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </div>
           <div className="form-row form-row--2">
@@ -188,10 +209,7 @@ export function MenuManagementView() {
                 className="form-select"
                 value={form.category}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    category: e.target.value as MenuCategory,
-                  })
+                  setForm({ ...form, category: e.target.value as MenuCategory })
                 }
               >
                 {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
@@ -203,6 +221,28 @@ export function MenuManagementView() {
             </div>
           </div>
         </div>
+      </Modal>
+
+      {/* ── Delete Confirm Modal ────────────────────────────────────────────── */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Eliminar platillo"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDeleteConfirm} disabled={saving}>
+              {saving ? "Eliminando..." : "Sí, eliminar"}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          ¿Estás seguro de que deseas eliminar{" "}
+          <strong>{deletingItem?.name}</strong>? Esta acción no se puede deshacer.
+        </p>
       </Modal>
     </>
   );
