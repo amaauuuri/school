@@ -1,35 +1,42 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puebla Bites | La Guía Definitiva de Comida Rápida y Antojitos Poblanos</title>
-    
+    <title>Puebla Bites | Comida rica y Antojitos Poblanos</title>
+
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Descubre la mejor comida rápida local en Puebla. Encuentra las mejores cemitas, tacos árabes, chalupas, molotes y más con nuestro buscador y recomendador interactivo.">
-    <meta name="keywords" content="comida rapida puebla, cemitas poblanas, tacos arabes, chalupas, molotes, comida local puebla, antojitos poblanos">
+    <meta name="description"
+        content="Descubre la mejor comida rápida local en Puebla. Encuentra las mejores cemitas, tacos árabes, chalupas, molotes y más con nuestro buscador y recomendador interactivo.">
+    <meta name="keywords"
+        content="comida rapida puebla, cemitas poblanas, tacos arabes, chalupas, molotes, comida local puebla, antojitos poblanos">
     <meta name="author" content="Puebla Bites Team">
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://pueblabites.local/">
     <meta property="og:title" content="Puebla Bites | La Guía Definitiva de Comida Rápida y Antojitos Poblanos">
-    <meta property="og:description" content="Busca y encuentra los mejores antojitos y comida rápida en Puebla. Filtra por zona, precio y categoría.">
+    <meta property="og:description"
+        content="Busca y encuentra los mejores antojitos y comida rápida en Puebla. Filtra por zona, precio y categoría.">
     <meta property="og:image" content="images/cemita_poblana.png">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
+        rel="stylesheet">
+
     <!-- Lucide Icons for premium light weight styling -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+
     <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    
+
     <!-- Header -->
     <header class="app-header" id="app-header">
         <div class="header-container">
@@ -37,7 +44,7 @@
                 <span class="logo-emoji">🌮</span>
                 <span class="logo-text">Puebla<span class="accent">Bites</span></span>
             </a>
-            
+
             <nav class="nav-menu" id="nav-menu">
                 <a href="#explore" class="nav-link active" id="nav-link-explore">Explorar</a>
                 <a href="#randomizer" class="nav-link" id="nav-link-random">¿Qué Cenar Hoy?</a>
@@ -46,7 +53,7 @@
                     <span class="fav-count" id="favorite-count">0</span>
                 </a>
             </nav>
-            
+
             <button class="theme-toggle" id="theme-toggle-btn" aria-label="Cambiar tema">
                 <i data-lucide="moon"></i>
             </button>
@@ -55,20 +62,23 @@
 
     <!-- Main Content -->
     <main>
-        
+
         <!-- Hero Section -->
         <section class="hero-section" id="hero-section">
             <div class="hero-bg-glow"></div>
             <div class="hero-content">
                 <div class="tagline">Guía Local de Puebla, Pue.</div>
-                <h1>La Guía Definitiva de Comida Rápida y Antojitos</h1>
-                <p class="hero-subtitle">Encuentra el sabor callejero más auténtico de la ciudad: desde cemitas crujientes y tacos árabes al carbón, hasta chalupas y molotes tradicionales.</p>
-                
+                <h1>Comida rica y Antojitos</h1>
+                <p class="hero-subtitle">Encuentra el sabor callejero más auténtico de la ciudad: desde cemitas
+                    crujientes y tacos árabes al carbón, hasta chalupas y molotes tradicionales.</p>
+
                 <!-- Search Box -->
                 <div class="search-container" id="search-box-container">
                     <i data-lucide="search" class="search-icon"></i>
-                    <input type="text" id="search-input" placeholder="Buscar cemitas, tacos, zonas, o restaurantes..." aria-label="Buscador de comida rápida">
-                    <button id="search-clear-btn" class="clear-btn" aria-label="Limpiar búsqueda" style="display: none;">
+                    <input type="text" id="search-input" placeholder="Buscar cemitas, tacos, zonas, o restaurantes..."
+                        aria-label="Buscador de comida rápida">
+                    <button id="search-clear-btn" class="clear-btn" aria-label="Limpiar búsqueda"
+                        style="display: none;">
                         <i data-lucide="x"></i>
                     </button>
                 </div>
@@ -85,7 +95,7 @@
 
                 <!-- Controls Layout -->
                 <div class="controls-panel" id="controls-panel">
-                    
+
                     <!-- Categories (Buttons) -->
                     <div class="filter-group">
                         <label class="filter-label">¿Qué se te antoja?</label>
@@ -133,12 +143,15 @@
                         <div class="price-group">
                             <label class="filter-label">Presupuesto</label>
                             <div class="price-options" id="price-options-container">
-                                <button class="price-btn" data-price="1" id="price-btn-1" aria-label="Económico">$</button>
-                                <button class="price-btn" data-price="2" id="price-btn-2" aria-label="Moderado">$$</button>
-                                <button class="price-btn" data-price="3" id="price-btn-3" aria-label="Premium">$$$</button>
+                                <button class="price-btn" data-price="1" id="price-btn-1"
+                                    aria-label="Económico">$</button>
+                                <button class="price-btn" data-price="2" id="price-btn-2"
+                                    aria-label="Moderado">$$</button>
+                                <button class="price-btn" data-price="3" id="price-btn-3"
+                                    aria-label="Premium">$$$</button>
                             </div>
                         </div>
-                        
+
                         <!-- Sort Options -->
                         <div class="select-group">
                             <label for="sort-select" class="filter-label">Ordenar por</label>
@@ -157,7 +170,7 @@
                 <div class="catalog-status" id="catalog-status">
                     <span id="results-count">Cargando lugares...</span>
                 </div>
-                
+
                 <div class="catalog-grid" id="catalog-grid">
                     <!-- Dynamic spots will be injected here by app.js -->
                 </div>
@@ -177,12 +190,14 @@
             <div class="randomizer-bg-glow"></div>
             <div class="container">
                 <div class="randomizer-layout">
-                    
+
                     <div class="randomizer-info">
                         <div class="tagline">¿Indeciso? Dejalo a la suerte</div>
                         <h2>La Ruleta del Sabor Poblano 🎲</h2>
-                        <p>¿No sabes si quieres Cemitas de milanesa, una orden de Tacos Árabes con chipotle o unas chalupas bien ahogadas en salsa verde? Deja que nuestra ruleta gastronómica elija por ti.</p>
-                        
+                        <p>¿No sabes si quieres Cemitas de milanesa, una orden de Tacos Árabes con chipotle o unas
+                            chalupas bien ahogadas en salsa verde? Deja que nuestra ruleta gastronómica elija por ti.
+                        </p>
+
                         <div class="randomizer-controls">
                             <button class="btn btn-primary btn-large btn-glow" id="spin-button">
                                 <span class="spinner-icon">🎲</span> ¡Tengo Hambre!
@@ -194,17 +209,20 @@
                         <div class="wheel-outer-wrapper">
                             <!-- Wheel Indicator -->
                             <div class="wheel-pointer"></div>
-                            
+
                             <!-- Main Wheel Canvas or SVG representation -->
                             <div class="wheel-container" id="wheel-container">
                                 <div class="wheel" id="wheel">
                                     <!-- Dynamic slices will be rendered in CSS/JS -->
                                     <div class="wheel-slice" style="--i:0; --color: #ff5722;"><span>Cemitas</span></div>
-                                    <div class="wheel-slice" style="--i:1; --color: #4caf50;"><span>Tacos Árabes</span></div>
-                                    <div class="wheel-slice" style="--i:2; --color: #ffc107;"><span>Chalupas</span></div>
+                                    <div class="wheel-slice" style="--i:1; --color: #4caf50;"><span>Tacos Árabes</span>
+                                    </div>
+                                    <div class="wheel-slice" style="--i:2; --color: #ffc107;"><span>Chalupas</span>
+                                    </div>
                                     <div class="wheel-slice" style="--i:3; --color: #e91e63;"><span>Molotes</span></div>
                                     <div class="wheel-slice" style="--i:4; --color: #9c27b0;"><span>Burgers</span></div>
-                                    <div class="wheel-slice" style="--i:5; --color: #00bcd4;"><span>Hot Dogs</span></div>
+                                    <div class="wheel-slice" style="--i:5; --color: #00bcd4;"><span>Hot Dogs</span>
+                                    </div>
                                 </div>
                                 <div class="wheel-center">
                                     <div class="wheel-center-dot"></div>
@@ -225,8 +243,9 @@
                         <div class="result-details">
                             <span class="result-category" id="result-category">Categoría</span>
                             <h3 id="result-title">Nombre del Restaurante</h3>
-                            <p class="result-desc" id="result-desc">Descripción especial del lugar y su mejor platillo.</p>
-                            
+                            <p class="result-desc" id="result-desc">Descripción especial del lugar y su mejor platillo.
+                            </p>
+
                             <div class="result-meta">
                                 <div class="meta-item">
                                     <i data-lucide="map-pin"></i>
@@ -239,7 +258,8 @@
                             </div>
 
                             <div class="result-actions">
-                                <a href="" id="result-map-link" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+                                <a href="" id="result-map-link" target="_blank" rel="noopener noreferrer"
+                                    class="btn btn-secondary btn-sm">
                                     <i data-lucide="map"></i> Cómo llegar
                                 </a>
                                 <button id="result-fav-btn" class="btn btn-outline btn-sm">
@@ -258,7 +278,8 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">Mis Lugares Favoritos</h2>
-                    <p class="section-desc">Tu lista personalizada de antojos en Puebla. Guardados localmente en tu navegador.</p>
+                    <p class="section-desc">Tu lista personalizada de antojos en Puebla. Guardados localmente en tu
+                        navegador.</p>
                 </div>
 
                 <div class="favorites-grid" id="favorites-grid">
@@ -268,7 +289,8 @@
                 <!-- Empty Favorites -->
                 <div class="empty-favorites" id="empty-favorites">
                     <i data-lucide="heart" class="heart-empty-icon"></i>
-                    <p>Aún no has guardado ningún lugar. ¡Haz clic en el corazón de cualquier tarjeta para agregarlo aquí!</p>
+                    <p>Aún no has guardado ningún lugar. ¡Haz clic en el corazón de cualquier tarjeta para agregarlo
+                        aquí!</p>
                 </div>
             </div>
         </section>
@@ -282,7 +304,7 @@
                 <span class="logo-text">Puebla<span class="accent">Bites</span></span>
                 <p>Descubriendo los mejores rincones de comida rápida y tradicional en la Angelópolis.</p>
             </div>
-            
+
             <div class="footer-links">
                 <h4>Categorías</h4>
                 <ul>
@@ -302,4 +324,5 @@
     <!-- JS Script -->
     <script src="app.js"></script>
 </body>
+
 </html>
