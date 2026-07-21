@@ -11,6 +11,9 @@ import {
   getAuth,
   signOut as secondarySignOut,
   sendEmailVerification as secondarySendEmail,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
@@ -19,6 +22,7 @@ import { auth, db, firebaseConfig } from "./firebase";
 export interface UserProfile {
   uid: string;
   email: string;
+  phone?: string;
   name: string;
   restaurantName: string;
   role: "ADMIN" | "STAFF";
@@ -34,6 +38,13 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUpAdmin: (name: string, restaurantName: string, email: string, password: string) => Promise<void>;
   createStaffAccount: (name: string, email: string, password: string) => Promise<void>;
+  setupRecaptcha: (containerId: string) => RecaptchaVerifier;
+  sendPhoneCode: (phoneNumber: string, containerId?: string) => Promise<ConfirmationResult>;
+  confirmPhoneCode: (
+    confirmationResult: ConfirmationResult,
+    code: string,
+    extraData?: { name?: string; restaurantName?: string }
+  ) => Promise<void>;
   logout: () => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   reloadUser: () => Promise<void>;
@@ -53,7 +64,22 @@ export function mapFirebaseError(error: any): string {
   if (code === "auth/email-already-in-use") {
     return "Este correo ya está registrado en Servitotal.";
   }
-  return "Algo salió mal. Por favor, inténtalo de nuevo.";
+  if (code === "auth/invalid-phone-number") {
+    return "El número de teléfono no es válido. Incluye la clave de país (ej. +521234567890).";
+  }
+  if (code === "auth/invalid-verification-code") {
+    return "El código de verificación SMS ingresado es incorrecto.";
+  }
+  if (code === "auth/code-expired") {
+    return "El código de verificación ha expirado. Por favor solicita uno nuevo.";
+  }
+  if (code === "auth/too-many-requests") {
+    return "Se han realizado demasiados intentos. Por favor espera unos minutos.";
+  }
+  if (code === "auth/captcha-check-failed") {
+    return "La verificación de reCAPTCHA falló. Intenta de nuevo.";
+  }
+  return error?.message || "Algo salió mal. Por favor, inténtalo de nuevo.";
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -229,6 +255,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Phone Authentication Setup & Execution
+  const setupRecaptcha = (containerId: string): RecaptchaVerifier => {
+    if (typeof window === "undefined") {
+      throw new Error("Recaptcha context is only available in client environment.");
+    }
+    if ((window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier.clear();
+      } catch (_) {}
+    }
+    const verifier = new RecaptchaVerifier(auth, containerId, {
+      size: "normal",
+      callback: () => {},
+      "expired-callback": () => {},
+    });
+    (window as any).recaptchaVerifier = verifier;
+    return verifier;
+  };
+
+  const sendPhoneCode = async (
+    phoneNumber: string,
+    containerId = "recaptcha-container"
+  ): Promise<ConfirmationResult> => {
+    setLoading(true);
+    try {
+      let appVerifier = (window as any).recaptchaVerifier;
+      if (!appVerifier) {
+        appVerifier = setupRecaptcha(containerId);
+      }
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      (window as any).confirmationResult = confirmationResult;
+      setLoading(false);
+      return confirmationResult;
+    } catch (error) {
+      setLoading(false);
+      if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
+        (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
+      }
+      throw new Error(mapFirebaseError(error));
+    }
+  };
+
+  const confirmPhoneCode = async (
+    confirmationResult: ConfirmationResult,
+    code: string,
+    extraData?: { name?: string; restaurantName?: string }
+  ) => {
+    setLoading(true);
+    try {
+      const userCredential = await confirmationResult.confirm(code);
+      const firebaseUser = userCredential.user;
+
+      // Check if user profile exists in Firestore
+      const docRef = doc(db, "users", firebaseUser.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const existingProfile = docSnap.data() as UserProfile;
+        setUser(firebaseUser);
+        setProfile(existingProfile);
+      } else {
+        // Create new user profile for phone registered user
+        const newProfile: UserProfile = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || `${firebaseUser.phoneNumber?.replace("+", "") || firebaseUser.uid}@servitotal.app`,
+          phone: firebaseUser.phoneNumber || undefined,
+          name: extraData?.name || "Usuario Servitotal",
+          restaurantName: extraData?.restaurantName || "Mi Restaurante",
+          role: "ADMIN",
+          createdAt: new Date().toISOString(),
+        };
+
+        await setDoc(docRef, newProfile);
+        setUser(firebaseUser);
+        setProfile(newProfile);
+      }
+    } catch (error) {
+      throw new Error(mapFirebaseError(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -238,6 +347,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUpAdmin,
         createStaffAccount,
+        setupRecaptcha,
+        sendPhoneCode,
+        confirmPhoneCode,
         logout,
         resendVerificationEmail,
         reloadUser,

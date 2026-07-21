@@ -6,12 +6,15 @@ import { useFirestore } from "@/lib/FirestoreContext";
 import { useAuth, UserProfile } from "@/lib/AuthContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { PhoneSDKGuideModal } from "./PhoneSDKGuideModal";
 
 interface StaffMember extends UserProfile {}
 
 export function RestaurantSettingsView() {
   const { restaurantConfig, updateRestaurantConfig, loadingData } = useFirestore();
   const { profile, createStaffAccount } = useAuth();
+
+  const [showPhoneGuide, setShowPhoneGuide] = useState(false);
 
   // Config form
   const [saved, setSaved] = useState(false);
@@ -159,9 +162,12 @@ export function RestaurantSettingsView() {
           </div>
         </div>
 
-        <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", alignItems: "center" }}>
+        <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
           <Button type="submit" variant="primary" disabled={saving}>
             {saving ? "Guardando..." : "Guardar configuración"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setShowPhoneGuide(true)}>
+            📱 Guía de Integración SDK (Web / iOS / Android)
           </Button>
           {saved && (
             <span className="text-sm" style={{ color: "var(--color-success)" }}>
@@ -218,22 +224,20 @@ export function RestaurantSettingsView() {
                   minLength={8} value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
                   required disabled={submittingStaff} />
               </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <Button type="submit" variant="primary" disabled={submittingStaff}>
-                  {submittingStaff ? "Creando cuenta..." : "Guardar miembro"}
-                </Button>
-                <Button type="button" variant="ghost"
-                  onClick={() => { setShowAddForm(false); setStaffError(""); setStaffSuccess(""); }}
-                  disabled={submittingStaff}>
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={submittingStaff}>
                   Cancelar
+                </Button>
+                <Button type="submit" variant="primary" disabled={submittingStaff}>
+                  {submittingStaff ? "Registrando..." : "Crear cuenta"}
                 </Button>
               </div>
             </div>
           </form>
         ) : loadingStaff ? (
-          <div className="text-muted text-sm" style={{ padding: "1rem 0" }}>Cargando personal...</div>
+          <div className="text-sm text-muted">Cargando personal...</div>
         ) : staffMembers.length === 0 ? (
-          <div style={{ background: "var(--color-bg)", border: "1px dashed var(--color-border)", borderRadius: "var(--radius-sm)", padding: "2rem", textAlign: "center", color: "var(--color-text-muted)" }}>
+          <div className="text-sm text-muted" style={{ padding: "1rem 0" }}>
             No hay miembros de personal registrados aún.
           </div>
         ) : (
@@ -265,6 +269,8 @@ export function RestaurantSettingsView() {
           </div>
         )}
       </div>
+
+      <PhoneSDKGuideModal open={showPhoneGuide} onClose={() => setShowPhoneGuide(false)} />
     </div>
   );
 }

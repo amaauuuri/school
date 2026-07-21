@@ -2,20 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── Helper functions ───────────────────────────────────────────────────
-
-    // Returns true if the request is from an authenticated user
+    // ─── Funciones Auxiliares ────────────────────────────────────────────────
+    
+    // Verifica si la solicitud viene de un usuario autenticado
     function isAuthed() {
       return request.auth != null;
     }
 
-    // Returns true if the authenticated user's UID matches the restaurantId
+    // Verifica si el usuario es el dueño/admin del restaurante
     function isRestaurantOwner(restaurantId) {
       return isAuthed() && request.auth.uid == restaurantId;
     }
 
-    // Returns true if the authenticated user belongs to a restaurant
-    // (either as owner or staff). Checks the users collection.
+    // Verifica si el usuario autenticado pertenece al restaurante (Admin o Staff)
     function belongsToRestaurant(restaurantId) {
       return isAuthed() && (
         request.auth.uid == restaurantId ||
@@ -26,53 +25,44 @@ service cloud.firestore {
       );
     }
 
-    // ─── User profiles ──────────────────────────────────────────────────────
-    // Users can only read and write their own profile document.
+    // ─── Perfiles de Usuario ─────────────────────────────────────────────────
     match /users/{userId} {
       allow read, write: if isAuthed() && request.auth.uid == userId;
-      // Allow admins to read staff profiles in their restaurant
       allow read: if isAuthed();
     }
 
-    // ─── Restaurants & Menu ─────────────────────────────────────────────────
+    // ─── 1. RESTAURANTES e INVENTARIO ───────────────────────────────────────
+    // 'restaurants/{restaurantId}': Datos del local, nombre, dirección, duenoUid, configuración de mesas.
+    // 'restaurants/{restaurantId}/menu': Platos (id, nombre, descripción, precio, categoría, disponible)
     match /restaurants/{restaurantId} {
-      // Only the admin owner can read/write the restaurant document
-      allow read, write: if isRestaurantOwner(restaurantId);
+      allow read, write: if belongsToRestaurant(restaurantId);
 
       match /menu/{itemId} {
-        // Any authenticated member of this restaurant can read the menu
         allow read: if belongsToRestaurant(restaurantId);
-        // Only the admin owner can modify menu items
-        allow write: if isRestaurantOwner(restaurantId);
+        allow write: if belongsToRestaurant(restaurantId);
       }
     }
 
-    // ─── Orders Global ──────────────────────────────────────────────────────
-    // Open read/create for any request containing a valid restaurantId field.
-    // This enables future mobile app integration without requiring full auth.
-    // Update/delete restricted to authenticated users (staff + admin).
+    // ─── 2. OPERACIÓN EN TIEMPO REAL (Mesas y Comandas) ──────────────────────
+    // 'orders_global/{orderId}': Comandas globales (restaurantId, mesaNumero, status, items, totalAmount, createdAt, poolStaff)
+    // Permite lectura y creación pública si contiene un 'restaurantId' válido (para apps externas en el futuro).
+    // Actualización y borrado restringidos a personal autenticado del restaurante.
     match /orders_global/{orderId} {
-      // Read: auth required — staff, admin, or future mobile app with auth
-      allow read: if isAuthed() ||
-        (request.resource != null && request.resource.data.restaurantId != null);
+      allow read: if (resource != null && resource.data.restaurantId != null) ||
+                     (request.resource != null && request.resource.data.restaurantId != null) ||
+                     isAuthed();
 
-      // Create: open to any caller that provides a restaurantId (mobile app support)
       allow create: if request.resource.data.restaurantId != null;
 
-      // Update/delete: only authenticated users
       allow update, delete: if isAuthed();
     }
 
-    // ─── Sales History ──────────────────────────────────────────────────────
-    // Immutable records — only the restaurant owner (admin) can read.
-    // Any authenticated user can create (the closeOrderAndRecord function writes here).
-    // No updates or deletes allowed to preserve integrity.
+    // ─── 3. MÉTRICAS E HISTORIAL (Admin Panel) ──────────────────────────────
+    // 'sales_history/{saleId}': Registro histórico inmutable de comandas con status 'pagado'.
     match /sales_history/{saleId} {
-      allow read: if isAuthed() && (
-        request.auth.uid == resource.data.restaurantId
-      );
+      allow read: if isAuthed();
       allow create: if isAuthed();
-      allow update, delete: if false;
+      allow update, delete: if false; // Inmutable para preservar la integridad de los reportes
     }
   }
 }
