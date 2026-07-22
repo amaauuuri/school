@@ -48,7 +48,7 @@ export default function HomePage() {
         <div className="container hero__grid">
           <div>
             <h1 className="hero__title heading-serif">
-              El POS que tu restaurante necesita
+              EL programa que tu restaurante necesita
             </h1>
             <p className="hero__subtitle">
               Servitotal centraliza mesas, órdenes, caja y reportes en una
@@ -81,13 +81,12 @@ export default function HomePage() {
                         : n === 6
                           ? "var(--color-danger-light)"
                           : "var(--color-success-light)",
-                    border: `2px solid ${
-                      n === 3
+                    border: `2px solid ${n === 3
                         ? "var(--color-warning)"
                         : n === 6
                           ? "var(--color-danger)"
                           : "var(--color-success)"
-                    }`,
+                      }`,
                   }}
                 >
                   {n}
