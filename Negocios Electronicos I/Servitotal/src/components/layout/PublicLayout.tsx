@@ -124,7 +124,7 @@ export function PublicFooter() {
               <span style={{ color: "white" }}>Servitotal</span>
             </div>
             <p style={{ marginTop: "1rem", opacity: 0.8, fontSize: "0.9375rem" }}>
-              El POS en la nube diseñado para restaurantes que quieren operar
+              El Sistema de punto de venta en la nube diseñado para restaurantes que quieren operar
               más rápido y vender más.
             </p>
           </div>

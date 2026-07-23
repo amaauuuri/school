@@ -61,12 +61,10 @@ export function AdminSidebar() {
           <Link href="/dashboard/mesas" className="dashboard-sidebar__link" title="Vista Operativa">
             <span className="dashboard-sidebar__link-icon">🪑</span>
             <span className="dashboard-sidebar__link-text">Vista Operativa</span>
-            <span className="dashboard-sidebar__label">Vista Operativa</span>
           </Link>
           <a href="#" onClick={handleLogout} className="dashboard-sidebar__link" title="Salir">
             <span className="dashboard-sidebar__link-icon">↩</span>
             <span className="dashboard-sidebar__link-text">Salir</span>
-            <span className="dashboard-sidebar__label">Salir</span>
           </a>
         </div>
       </aside>

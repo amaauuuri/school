@@ -35,7 +35,6 @@ export function DashboardSidebar() {
           <Link href="/dashboard/mesas" className="public-header__logo dashboard-sidebar__brand">
             <span className="public-header__logo-icon">S</span>
             <span className="dashboard-sidebar__logo-text">Servitotal</span>
-            <span className="dashboard-sidebar__label">Servitotal</span>
           </Link>
           <div className="dashboard-sidebar__restaurant dashboard-sidebar__label">{restaurantName}</div>
         </div>
@@ -52,7 +51,6 @@ export function DashboardSidebar() {
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
               <span className="dashboard-sidebar__link-text">{item.label}</span>
-              <span className="dashboard-sidebar__label">{item.label}</span>
             </Link>
           ))}
         </nav>
@@ -62,13 +60,11 @@ export function DashboardSidebar() {
             <Link href="/admin/menu" className="dashboard-sidebar__link" title="Panel Admin">
               <span className="dashboard-sidebar__link-icon">⚙️</span>
               <span className="dashboard-sidebar__link-text">Panel Admin</span>
-              <span className="dashboard-sidebar__label">Panel Admin</span>
             </Link>
           )}
           <a href="#" onClick={handleLogout} className="dashboard-sidebar__link" title="Salir">
             <span className="dashboard-sidebar__link-icon">↩</span>
             <span className="dashboard-sidebar__link-text">Salir</span>
-            <span className="dashboard-sidebar__label">Salir</span>
           </a>
         </div>
       </aside>
