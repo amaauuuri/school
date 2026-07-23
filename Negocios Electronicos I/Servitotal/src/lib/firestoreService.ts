@@ -57,7 +57,7 @@ function toDate(ts: any): string {
  */
 export async function initRestaurantIfNeeded(
   uid: string,
-  profile: { name: string; email: string; restaurantName: string }
+  profile: { name: string; email: string; restaurantName: string; phone?: string }
 ): Promise<void> {
   const restaurantRef = doc(db, "restaurants", uid);
   const snap = await getDoc(restaurantRef);
@@ -65,29 +65,16 @@ export async function initRestaurantIfNeeded(
   if (!snap.exists()) {
     const restaurantDoc: Omit<RestaurantDoc, "id"> = {
       name: profile.restaurantName,
-      address: INITIAL_CONFIG.address,
-      phone: INITIAL_CONFIG.phone,
+      address: "",
+      phone: profile.phone || "",
       email: profile.email,
-      tableCount: INITIAL_CONFIG.tableCount,
-      taxRate: INITIAL_CONFIG.taxRate,
+      tableCount: 8,
+      taxRate: 0.16, // Always fixed at 16%
       duenoUid: uid,
       createdAt: new Date().toISOString(),
     };
     await setDoc(restaurantRef, restaurantDoc);
-
-    // Seed demo menu items
-    const batch = writeBatch(db);
-    INITIAL_MENU.forEach((item) => {
-      const menuRef = doc(db, "restaurants", uid, "menu", item.id);
-      batch.set(menuRef, {
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        category: item.category,
-        available: item.available,
-      });
-    });
-    await batch.commit();
+    // Note: No automatic menu seeding. New restaurants start with a clean slate ready for client configuration.
   }
 }
 

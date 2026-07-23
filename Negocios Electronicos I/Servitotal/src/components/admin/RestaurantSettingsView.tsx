@@ -6,15 +6,12 @@ import { useFirestore } from "@/lib/FirestoreContext";
 import { useAuth, UserProfile } from "@/lib/AuthContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PhoneSDKGuideModal } from "./PhoneSDKGuideModal";
 
 interface StaffMember extends UserProfile {}
 
 export function RestaurantSettingsView() {
   const { restaurantConfig, updateRestaurantConfig, loadingData } = useFirestore();
   const { profile, createStaffAccount } = useAuth();
-
-  const [showPhoneGuide, setShowPhoneGuide] = useState(false);
 
   // Config form
   const [saved, setSaved] = useState(false);
@@ -24,7 +21,7 @@ export function RestaurantSettingsView() {
     address: "",
     phone: "",
     email: "",
-    tableCount: 12,
+    tableCount: 8,
     taxRate: 0.16,
   });
 
@@ -32,12 +29,12 @@ export function RestaurantSettingsView() {
   useEffect(() => {
     if (restaurantConfig) {
       setForm({
-        name: restaurantConfig.name,
-        address: restaurantConfig.address,
-        phone: restaurantConfig.phone,
-        email: restaurantConfig.email,
-        tableCount: restaurantConfig.tableCount,
-        taxRate: restaurantConfig.taxRate,
+        name: restaurantConfig.name || "",
+        address: restaurantConfig.address || "",
+        phone: restaurantConfig.phone || "",
+        email: restaurantConfig.email || "",
+        tableCount: restaurantConfig.tableCount || 8,
+        taxRate: 0.16, // Always fixed at 16%
       });
     }
   }, [restaurantConfig]);
@@ -46,7 +43,10 @@ export function RestaurantSettingsView() {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateRestaurantConfig(form);
+      await updateRestaurantConfig({
+        ...form,
+        taxRate: 0.16, // Always enforce 16% IVA
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } finally {
@@ -81,7 +81,9 @@ export function RestaurantSettingsView() {
     }
   };
 
-  useEffect(() => { fetchStaff(); }, [profile]);
+  useEffect(() => {
+    fetchStaff();
+  }, [profile]);
 
   async function handleAddStaff(e: FormEvent) {
     e.preventDefault();
@@ -91,9 +93,14 @@ export function RestaurantSettingsView() {
     try {
       await createStaffAccount(staffName, staffEmail, staffPassword);
       setStaffSuccess("¡Personal registrado! Se envió un correo de verificación.");
-      setStaffName(""); setStaffEmail(""); setStaffPassword("");
+      setStaffName("");
+      setStaffEmail("");
+      setStaffPassword("");
       await fetchStaff();
-      setTimeout(() => { setShowAddForm(false); setStaffSuccess(""); }, 3000);
+      setTimeout(() => {
+        setShowAddForm(false);
+        setStaffSuccess("");
+      }, 3000);
     } catch (err: any) {
       setStaffError(err.message ?? "Error al crear la cuenta del personal.");
     } finally {
@@ -111,7 +118,7 @@ export function RestaurantSettingsView() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-      {/* ── Config form ─────────────────────────────────────────────────────── */}
+      {/* Config Form */}
       <form onSubmit={handleSubmit}>
         <div className="grid grid--2">
           <div className="card">
@@ -119,55 +126,86 @@ export function RestaurantSettingsView() {
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div className="form-group">
                 <label className="form-label">Nombre del restaurante</label>
-                <input className="form-input" value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input
+                  className="form-input"
+                  placeholder="ej. La Cocina de María"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Dirección</label>
-                <input className="form-input" value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <input
+                  className="form-input"
+                  placeholder="ej. Av. Reforma #123, Col. Centro"
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                />
               </div>
               <div className="form-row form-row--2">
                 <div className="form-group">
                   <label className="form-label">Teléfono</label>
-                  <input className="form-input" value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <input
+                    className="form-input"
+                    placeholder="ej. 5512345678"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Correo</label>
-                  <input type="email" className="form-input" value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <label className="form-label">Correo de contacto</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="contacto@restaurante.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="card">
-            <h3 style={{ fontWeight: 600, marginBottom: "1.25rem" }}>Operación</h3>
+            <h3 style={{ fontWeight: 600, marginBottom: "1.25rem" }}>Capacidad y Configuración</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div className="form-group">
-                <label className="form-label">Número de mesas</label>
-                <input type="number" className="form-input" min={1} max={50}
+                <label className="form-label">Número de mesas en el restaurante</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  min={1}
+                  max={50}
                   value={form.tableCount}
-                  onChange={(e) => setForm({ ...form, tableCount: parseInt(e.target.value) || 1 })} />
+                  onChange={(e) =>
+                    setForm({ ...form, tableCount: Math.min(50, Math.max(1, parseInt(e.target.value) || 1)) })
+                  }
+                />
+                <span className="text-sm text-muted">
+                  Capacidad de mesas configurable (máximo 50 mesas según tu suscripción).
+                </span>
               </div>
+
               <div className="form-group">
-                <label className="form-label">Tasa de IVA ({(form.taxRate * 100).toFixed(0)}%)</label>
-                <input type="range" min={0} max={0.25} step={0.01}
-                  value={form.taxRate}
-                  onChange={(e) => setForm({ ...form, taxRate: parseFloat(e.target.value) })}
-                  style={{ width: "100%" }} />
+                <label className="form-label">Tasa de Impuesto (IVA)</label>
+                <div
+                  className="form-input"
+                  style={{
+                    background: "var(--color-bg)",
+                    color: "var(--color-text-muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  Fijo al 16% (Calculado automáticamente en caja)
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", alignItems: "center" }}>
           <Button type="submit" variant="primary" disabled={saving}>
             {saving ? "Guardando..." : "Guardar configuración"}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setShowPhoneGuide(true)}>
-            📱 Guía de Integración SDK (Web / iOS / Android)
           </Button>
           {saved && (
             <span className="text-sm" style={{ color: "var(--color-success)" }}>
@@ -177,7 +215,7 @@ export function RestaurantSettingsView() {
         </div>
       </form>
 
-      {/* ── Staff section ────────────────────────────────────────────────────── */}
+      {/* Staff Section */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <div>
@@ -192,8 +230,16 @@ export function RestaurantSettingsView() {
         </div>
 
         {showAddForm ? (
-          <form onSubmit={handleAddStaff}
-            style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", padding: "1.25rem", background: "var(--color-bg)", maxWidth: "500px" }}>
+          <form
+            onSubmit={handleAddStaff}
+            style={{
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-sm)",
+              padding: "1.25rem",
+              background: "var(--color-bg)",
+              maxWidth: "500px",
+            }}
+          >
             <h4 style={{ fontWeight: 600, marginBottom: "1rem" }}>Registrar miembro de personal</h4>
             {staffError && (
               <div style={{ background: "var(--color-danger-light)", color: "var(--color-danger)", padding: "0.5rem 0.75rem", borderRadius: "var(--radius-sm)", fontSize: "0.875rem", marginBottom: "1rem", fontWeight: 500 }}>
@@ -208,21 +254,43 @@ export function RestaurantSettingsView() {
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div className="form-group">
                 <label className="form-label" htmlFor="staffName">Nombre completo</label>
-                <input id="staffName" type="text" className="form-input" placeholder="Juan Pérez"
-                  value={staffName} onChange={(e) => setStaffName(e.target.value)}
-                  required disabled={submittingStaff} />
+                <input
+                  id="staffName"
+                  type="text"
+                  className="form-input"
+                  placeholder="Juan Pérez"
+                  value={staffName}
+                  onChange={(e) => setStaffName(e.target.value)}
+                  required
+                  disabled={submittingStaff}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="staffEmail">Correo electrónico</label>
-                <input id="staffEmail" type="email" className="form-input" placeholder="juan@restaurante.com"
-                  value={staffEmail} onChange={(e) => setStaffEmail(e.target.value)}
-                  required disabled={submittingStaff} />
+                <input
+                  id="staffEmail"
+                  type="email"
+                  className="form-input"
+                  placeholder="juan@restaurante.com"
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  required
+                  disabled={submittingStaff}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="staffPassword">Contraseña de acceso</label>
-                <input id="staffPassword" type="password" className="form-input" placeholder="Mínimo 8 caracteres"
-                  minLength={8} value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)}
-                  required disabled={submittingStaff} />
+                <input
+                  id="staffPassword"
+                  type="password"
+                  className="form-input"
+                  placeholder="Mínimo 8 caracteres"
+                  minLength={8}
+                  value={staffPassword}
+                  onChange={(e) => setStaffPassword(e.target.value)}
+                  required
+                  disabled={submittingStaff}
+                />
               </div>
               <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
                 <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={submittingStaff}>
@@ -269,8 +337,6 @@ export function RestaurantSettingsView() {
           </div>
         )}
       </div>
-
-      <PhoneSDKGuideModal open={showPhoneGuide} onClose={() => setShowPhoneGuide(false)} />
     </div>
   );
 }

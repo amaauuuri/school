@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
-  { href: "/precios", label: "Precios" },
+  { href: "/precios", label: "Precios y Servicios" },
+  { href: "/contacto", label: "Nosotros y Contacto" },
 ];
 
 export function PublicHeader() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="public-header">
@@ -21,6 +23,7 @@ export function PublicHeader() {
           Servitotal
         </Link>
 
+        {/* Desktop Navigation */}
         <nav className="public-nav">
           {NAV_LINKS.map((link) => (
             <Link
@@ -35,15 +38,50 @@ export function PublicHeader() {
           ))}
         </nav>
 
+        {/* Header Actions */}
         <div className="public-header__actions">
-          <Link href="/login">
+          <Link href="/login" className="hide-mobile">
             <Button variant="ghost">Iniciar sesión</Button>
           </Link>
           <Link href="/registro">
             <Button variant="primary">Registrarse</Button>
           </Link>
+          
+          {/* Mobile Hamburger Toggle Button */}
+          <button
+            type="button"
+            className="mobile-burger-btn"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Abrir menú"
+          >
+            {mobileOpen ? "✕" : "☰"}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Drawer Menu */}
+      {mobileOpen && (
+        <div className="public-mobile-drawer">
+          <nav className="public-mobile-nav">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`public-mobile-nav__link ${
+                  pathname === link.href ? "public-mobile-nav__link--active" : ""
+                }`}
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <hr style={{ borderColor: "var(--color-border)", margin: "0.5rem 0" }} />
+            <Link href="/login" onClick={() => setMobileOpen(false)}>
+              <Button variant="ghost" block>Iniciar sesión</Button>
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
@@ -66,8 +104,8 @@ export function PublicFooter() {
           <div className="public-footer__col">
             <h4>Producto</h4>
             <Link href="/">Funcionalidades</Link>
-            <Link href="/precios">Precios</Link>
-            <Link href="/dashboard/mesas">Demo operativa</Link>
+            <Link href="/precios">Precios y Servicios</Link>
+            <Link href="/contacto">Nosotros</Link>
           </div>
           <div className="public-footer__col">
             <h4>Cuenta</h4>
@@ -76,12 +114,12 @@ export function PublicFooter() {
           </div>
           <div className="public-footer__col">
             <h4>Soporte</h4>
-            <a href="mailto:soporte@servitotal.mx">soporte@servitotal.mx</a>
-            <a href="#">Centro de ayuda</a>
+            <a href="mailto:servi.tootal@gmail.com">servi.tootal@gmail.com</a>
+            <Link href="/contacto">Centro de contacto</Link>
           </div>
         </div>
         <div className="public-footer__bottom">
-          © {new Date().getFullYear()} Servitotal. Todos los derechos reservados.
+          © {new Date().getFullYear()} Servitotal. Creado por Zaira & Amauri. Todos los derechos reservados.
         </div>
       </div>
     </footer>

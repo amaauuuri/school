@@ -112,7 +112,7 @@ export function MenuManagementView() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card card-table-wrapper" style={{ padding: 0 }}>
         <table className="data-table">
           <thead>
             <tr>

@@ -7,15 +7,14 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   sendEmailVerification,
+  signInWithPopup,
+  GoogleAuthProvider,
   User,
   getAuth,
   signOut as secondarySignOut,
   sendEmailVerification as secondarySendEmail,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { initializeApp, getApp, deleteApp } from "firebase/app";
 import { auth, db, firebaseConfig } from "./firebase";
 
@@ -36,15 +35,16 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUpAdmin: (name: string, restaurantName: string, email: string, password: string) => Promise<void>;
-  createStaffAccount: (name: string, email: string, password: string) => Promise<void>;
-  setupRecaptcha: (containerId: string) => RecaptchaVerifier;
-  sendPhoneCode: (phoneNumber: string, containerId?: string) => Promise<ConfirmationResult>;
-  confirmPhoneCode: (
-    confirmationResult: ConfirmationResult,
-    code: string,
-    extraData?: { name?: string; restaurantName?: string }
+  signInWithPhoneOrEmail: (identifier: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signUpAdmin: (
+    name: string,
+    restaurantName: string,
+    email: string,
+    password: string,
+    phone?: string
   ) => Promise<void>;
+  createStaffAccount: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   reloadUser: () => Promise<void>;
@@ -59,25 +59,16 @@ export function mapFirebaseError(error: any): string {
     code === "auth/user-not-found" ||
     code === "auth/invalid-credential"
   ) {
-    return "El correo o la contraseña son incorrectos.";
+    return "El correo/teléfono o la contraseña son incorrectos.";
   }
   if (code === "auth/email-already-in-use") {
     return "Este correo ya está registrado en Servitotal.";
   }
-  if (code === "auth/invalid-phone-number") {
-    return "El número de teléfono no es válido. Incluye la clave de país (ej. +521234567890).";
-  }
-  if (code === "auth/invalid-verification-code") {
-    return "El código de verificación SMS ingresado es incorrecto.";
-  }
-  if (code === "auth/code-expired") {
-    return "El código de verificación ha expirado. Por favor solicita uno nuevo.";
-  }
   if (code === "auth/too-many-requests") {
     return "Se han realizado demasiados intentos. Por favor espera unos minutos.";
   }
-  if (code === "auth/captcha-check-failed") {
-    return "La verificación de reCAPTCHA falló. Intenta de nuevo.";
+  if (code === "auth/popup-closed-by-user") {
+    return "Se cerró la ventana de inicio de sesión con Google.";
   }
   return error?.message || "Algo salió mal. Por favor, inténtalo de nuevo.";
 }
@@ -114,14 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Sign In
+  // Standard Email Sign In
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
-      // Immediately fetch profile
       const docRef = doc(db, "users", firebaseUser.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -133,12 +123,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Sign In with Phone or Email (Unified Single Field)
+  const signInWithPhoneOrEmail = async (identifier: string, password: string) => {
+    setLoading(true);
+    const cleanId = identifier.trim();
+    
+    try {
+      let targetEmail = cleanId;
+
+      // If not an email (no '@'), search by phone number in Firestore
+      if (!cleanId.includes("@")) {
+        const cleanPhone = cleanId.replace(/\s+/g, "");
+        const q = query(collection(db, "users"), where("phone", "==", cleanPhone));
+        const querySnap = await getDocs(q);
+
+        if (querySnap.empty) {
+          throw { code: "auth/user-not-found" };
+        }
+
+        const userDoc = querySnap.docs[0].data() as UserProfile;
+        targetEmail = userDoc.email;
+      }
+
+      await signIn(targetEmail, password);
+    } catch (error) {
+      setLoading(false);
+      throw new Error(mapFirebaseError(error));
+    }
+  };
+
+  // Google Sign In (Popup)
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+
+      const docRef = doc(db, "users", googleUser.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        const newProfile: UserProfile = {
+          uid: googleUser.uid,
+          email: googleUser.email || "",
+          phone: googleUser.phoneNumber || "",
+          name: googleUser.displayName || "Partner Servitotal",
+          restaurantName: googleUser.displayName ? `Restaurante de ${googleUser.displayName}` : "Mi Restaurante",
+          role: "ADMIN",
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(docRef, newProfile);
+        setProfile(newProfile);
+      } else {
+        setProfile(docSnap.data() as UserProfile);
+      }
+      setUser(googleUser);
+    } catch (error) {
+      setLoading(false);
+      throw new Error(mapFirebaseError(error));
+    }
+  };
+
   // Sign Up Admin (Owner)
   const signUpAdmin = async (
     name: string,
     restaurantName: string,
     email: string,
-    password: string
+    password: string,
+    phone?: string
   ) => {
     setLoading(true);
     try {
@@ -148,6 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const newProfile: UserProfile = {
         uid: firebaseUser.uid,
         email,
+        phone: phone ? phone.trim().replace(/\s+/g, "") : "",
         name,
         restaurantName,
         role: "ADMIN",
@@ -157,11 +211,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Save profile to firestore
       await setDoc(doc(db, "users", firebaseUser.uid), newProfile);
       
-      // Update local state directly to avoid races
       setUser(firebaseUser);
       setProfile(newProfile);
 
-      // Force Email Verification
+      // Trigger Email Verification
       await sendEmailVerification(firebaseUser);
     } catch (error) {
       setLoading(false);
@@ -176,10 +229,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const restaurantName = profile.restaurantName;
-    // The admin's UID IS the restaurantId in Firestore
     const restaurantId = user.uid;
 
-    // Use a secondary App instance to avoid logging out the current admin
     let secondaryApp;
     try {
       secondaryApp = initializeApp(firebaseConfig, "secondary");
@@ -199,20 +250,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         restaurantName,
         role: "STAFF",
         createdAt: new Date().toISOString(),
-        restaurantId, // ← link staff to the admin's restaurant
+        restaurantId,
       };
 
-      // Save STAFF profile to firestore using the primary db client
       await setDoc(doc(db, "users", newStaffUser.uid), newStaffProfile);
-
-      // Send verification email to the new staff user
       await secondarySendEmail(newStaffUser);
-
-      // Log out from secondary instance so it doesn't persist
       await secondarySignOut(secondaryAuth);
       await deleteApp(secondaryApp);
     } catch (error) {
-      // Cleanup app if error occurs
       try {
         await deleteApp(secondaryApp);
       } catch (_) {}
@@ -255,89 +300,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Phone Authentication Setup & Execution
-  const setupRecaptcha = (containerId: string): RecaptchaVerifier => {
-    if (typeof window === "undefined") {
-      throw new Error("Recaptcha context is only available in client environment.");
-    }
-    if ((window as any).recaptchaVerifier) {
-      try {
-        (window as any).recaptchaVerifier.clear();
-      } catch (_) {}
-    }
-    const verifier = new RecaptchaVerifier(auth, containerId, {
-      size: "normal",
-      callback: () => {},
-      "expired-callback": () => {},
-    });
-    (window as any).recaptchaVerifier = verifier;
-    return verifier;
-  };
-
-  const sendPhoneCode = async (
-    phoneNumber: string,
-    containerId = "recaptcha-container"
-  ): Promise<ConfirmationResult> => {
-    setLoading(true);
-    try {
-      let appVerifier = (window as any).recaptchaVerifier;
-      if (!appVerifier) {
-        appVerifier = setupRecaptcha(containerId);
-      }
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      (window as any).confirmationResult = confirmationResult;
-      setLoading(false);
-      return confirmationResult;
-    } catch (error) {
-      setLoading(false);
-      if ((window as any).recaptchaWidgetId !== undefined && (window as any).grecaptcha) {
-        (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-      }
-      throw new Error(mapFirebaseError(error));
-    }
-  };
-
-  const confirmPhoneCode = async (
-    confirmationResult: ConfirmationResult,
-    code: string,
-    extraData?: { name?: string; restaurantName?: string }
-  ) => {
-    setLoading(true);
-    try {
-      const userCredential = await confirmationResult.confirm(code);
-      const firebaseUser = userCredential.user;
-
-      // Check if user profile exists in Firestore
-      const docRef = doc(db, "users", firebaseUser.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const existingProfile = docSnap.data() as UserProfile;
-        setUser(firebaseUser);
-        setProfile(existingProfile);
-      } else {
-        // Create new user profile for phone registered user
-        const newProfile: UserProfile = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || `${firebaseUser.phoneNumber?.replace("+", "") || firebaseUser.uid}@servitotal.app`,
-          phone: firebaseUser.phoneNumber || undefined,
-          name: extraData?.name || "Usuario Servitotal",
-          restaurantName: extraData?.restaurantName || "Mi Restaurante",
-          role: "ADMIN",
-          createdAt: new Date().toISOString(),
-        };
-
-        await setDoc(docRef, newProfile);
-        setUser(firebaseUser);
-        setProfile(newProfile);
-      }
-    } catch (error) {
-      throw new Error(mapFirebaseError(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -345,11 +307,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         signIn,
+        signInWithPhoneOrEmail,
+        signInWithGoogle,
         signUpAdmin,
         createStaffAccount,
-        setupRecaptcha,
-        sendPhoneCode,
-        confirmPhoneCode,
         logout,
         resendVerificationEmail,
         reloadUser,

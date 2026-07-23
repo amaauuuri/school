@@ -5,27 +5,14 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/lib/AuthContext";
-import type { ConfirmationResult } from "firebase/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, profile, signIn, sendPhoneCode, confirmPhoneCode } = useAuth();
+  const { user, profile, signInWithPhoneOrEmail, signInWithGoogle } = useAuth();
   
-  const [authMode, setAuthMode] = useState<"email" | "phone">("email");
-  
-  // Email state
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  
-  // Phone state
-  const [phoneNumber, setPhoneNumber] = useState("+52 ");
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [otpCode, setOtpCode] = useState("");
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  
-  // Common state
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -39,50 +26,26 @@ export default function LoginPage() {
     }
   }, [user, profile, router]);
 
-  async function handleEmailSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      await signInWithPhoneOrEmail(identifier, password);
     } catch (err: any) {
       setError(err.message || "Algo salió mal. Por favor, inténtalo de nuevo.");
       setLoading(false);
     }
   }
 
-  async function handleSendSms(e: FormEvent) {
-    e.preventDefault();
+  async function handleGoogleSignIn() {
     setError("");
     setLoading(true);
-
     try {
-      const formattedPhone = phoneNumber.trim().replace(/\s+/g, "");
-      if (!formattedPhone.startsWith("+")) {
-        throw new Error("Ingresa el número de teléfono con código de país (ej. +52 55 1234 5678).");
-      }
-      const result = await sendPhoneCode(formattedPhone, "recaptcha-container");
-      setConfirmationResult(result);
-      setLoading(false);
-      setShowOtpModal(true);
+      await signInWithGoogle();
     } catch (err: any) {
-      setError(err.message || "No se pudo enviar el código SMS. Revisa el número de teléfono.");
-      setLoading(false);
-    }
-  }
-
-  async function handleVerifyOtp(e: FormEvent) {
-    e.preventDefault();
-    if (!confirmationResult) return;
-    setError("");
-    setLoading(true);
-
-    try {
-      await confirmPhoneCode(confirmationResult, otpCode.trim());
-      setShowOtpModal(false);
-    } catch (err: any) {
-      setError(err.message || "Código de verificación incorrecto.");
+      setError(err.message || "No se pudo iniciar sesión con Google.");
       setLoading(false);
     }
   }
@@ -95,41 +58,6 @@ export default function LoginPage() {
           <p className="auth-card__subtitle">
             Accede al panel de tu restaurante Servitotal.
           </p>
-
-          {/* Mode Selector Tabs */}
-          <div
-            style={{
-              display: "flex",
-              gap: "0.5rem",
-              marginBottom: "1.5rem",
-              background: "var(--color-bg-alt, #f3f4f6)",
-              padding: "0.25rem",
-              borderRadius: "var(--radius-md, 8px)",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode("email");
-                setError("");
-              }}
-              className={`btn btn--sm ${authMode === "email" ? "btn--primary" : "btn--ghost"}`}
-              style={{ flex: 1 }}
-            >
-              ✉️ Correo
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode("phone");
-                setError("");
-              }}
-              className={`btn btn--sm ${authMode === "phone" ? "btn--primary" : "btn--ghost"}`}
-              style={{ flex: 1 }}
-            >
-              📱 Teléfono / SMS
-            </button>
-          </div>
 
           {error && (
             <div
@@ -148,147 +76,85 @@ export default function LoginPage() {
             </div>
           )}
 
-          {authMode === "email" ? (
-            <form onSubmit={handleEmailSubmit}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="email">
-                    Correo electrónico
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    className="form-input"
-                    placeholder="tu@restaurante.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="password">
-                    Contraseña
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    className="form-input"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <Button type="submit" variant="primary" block disabled={loading}>
-                  {loading ? "Iniciando sesión..." : "Entrar al panel"}
-                </Button>
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="identifier">
+                  Correo electrónico o Teléfono celular
+                </label>
+                <input
+                  id="identifier"
+                  type="text"
+                  className="form-input"
+                  placeholder="ejemplo@restaurante.com o 5512345678"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  required
+                  disabled={loading}
+                />
               </div>
-            </form>
-          ) : (
-            <form onSubmit={handleSendSms}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="phone">
-                    Número Celular (con lada de país)
-                  </label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    className="form-input"
-                    placeholder="+52 55 1234 5678"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                  <small style={{ color: "var(--color-text-muted)", fontSize: "0.75rem" }}>
-                    Ejemplo México: +52 5512345678
-                  </small>
-                </div>
 
-                {/* Container element for Firebase reCAPTCHA */}
-                <div id="recaptcha-container" style={{ margin: "0.5rem 0" }}></div>
-
-                <Button type="submit" variant="primary" block disabled={loading}>
-                  {loading ? "Enviando SMS..." : "Enviar código de verificación"}
-                </Button>
+              <div className="form-group">
+                <label className="form-label" htmlFor="password">
+                  Contraseña
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  className="form-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                />
               </div>
-            </form>
-          )}
+
+              <Button type="submit" variant="primary" block disabled={loading}>
+                {loading ? "Iniciando sesión..." : "Entrar al panel"}
+              </Button>
+            </div>
+          </form>
 
           <div className="auth-card__divider">o</div>
 
-          <p className="text-sm text-muted" style={{ textAlign: "center" }}>
+          <Button
+            type="button"
+            variant="outline"
+            block
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            Continuar con Google
+          </Button>
+
+          <p className="text-sm text-muted" style={{ textAlign: "center", marginTop: "1.5rem" }}>
             ¿No tienes cuenta?{" "}
-            <Link href="/registro" style={{ color: "var(--color-primary)" }}>
+            <Link href="/registro" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
               Regístrate gratis
             </Link>
           </p>
         </div>
       </div>
-
-      {/* Custom Modal for OTP Code Input */}
-      <Modal
-        open={showOtpModal}
-        onClose={() => setShowOtpModal(false)}
-        title="Verificación por Código SMS"
-      >
-        <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
-            Hemos enviado un código SMS de 6 dígitos al número <strong>{phoneNumber}</strong>.
-          </p>
-
-          {error && (
-            <div
-              style={{
-                background: "var(--color-danger-light)",
-                color: "var(--color-danger)",
-                padding: "0.75rem",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "0.875rem",
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="otp">
-              Código SMS de 6 dígitos
-            </label>
-            <input
-              id="otp"
-              type="text"
-              className="form-input"
-              placeholder="123456"
-              maxLength={6}
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-              required
-              autoFocus
-              style={{ letterSpacing: "0.25rem", textAlign: "center", fontSize: "1.25rem" }}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "1rem" }}>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowOtpModal(false)}
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? "Verificando..." : "Confirmar y Entrar"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </PublicLayout>
   );
 }
