@@ -2,32 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { CATEGORY_LABELS, formatCurrency, useServitotalStore } from "@/lib/store";
+import { formatCurrency, useServitotalStore } from "@/lib/store";
 import { useFirestore } from "@/lib/FirestoreContext";
 import { useAuth } from "@/lib/AuthContext";
-import type { GlobalOrder, MenuCategory, MenuItem, OrderItem } from "@/lib/types";
+import type { GlobalOrder, MenuItem, OrderItem } from "@/lib/types";
 
-const CATEGORIES: MenuCategory[] = ["alimentos", "bebidas", "postres"];
-
-/** Convert Firestore OrderItems → display-friendly cart lines */
-function toCartLines(items: OrderItem[]) {
-  return items.map((i) => ({
-    platilloId: i.platilloId,
-    nombre: i.nombre,
-    cantidad: i.cantidad,
-    precioUnitario: i.precioUnitario,
-    notas: i.notas ?? "",
-  }));
+interface CustomCategory {
+  name: string;
+  subcategories: string[];
 }
 
-export function OrderTakingView() {
-  const [activeCategory, setActiveCategory] = useState<MenuCategory>("alimentos");
-  const [saving, setSaving] = useState(false);
+const DEFAULT_CATEGORIES: CustomCategory[] = [
+  { name: "Alimentos", subcategories: ["Entradas", "Platos Fuertes", "Postres"] },
+  { name: "Bebidas", subcategories: ["Calientes", "Frías", "Alcoholes"] },
+  { name: "Postres", subcategories: ["Pasteles", "Helados"] },
+];
 
+export function OrderTakingView() {
   const { activeTableId, setActiveTableId } = useServitotalStore();
   const { menu, activeOrders, createOrder, updateOrderItems, updateOrderStatus, restaurantConfig } =
     useFirestore();
   const { user } = useAuth();
+
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [activeSubcategory, setActiveSubcategory] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   // The mesaNumero is stored as a string in activeTableId
   const mesaNumero = activeTableId ? parseInt(activeTableId, 10) : null;
@@ -42,6 +41,8 @@ export function OrderTakingView() {
 
   // Sync cart when the active order changes externally (real-time)
   const prevOrderId = useRef<string | undefined>(undefined);
+  const creationPending = useRef(false);
+
   useEffect(() => {
     if (activeOrder && activeOrder.id !== prevOrderId.current) {
       setCart(activeOrder.items);
@@ -53,9 +54,79 @@ export function OrderTakingView() {
     }
   }, [activeOrder]);
 
-  const filteredMenu = menu.filter(
-    (item) => item.category === activeCategory && item.available
-  );
+  // Load configured categories from restaurant config or defaults
+  const categoriesList: CustomCategory[] =
+    (restaurantConfig as any)?.customCategories || DEFAULT_CATEGORIES;
+
+  // Initialize selected category
+  useEffect(() => {
+    if (categoriesList && categoriesList.length > 0 && !activeCategory) {
+      setActiveCategory(categoriesList[0].name);
+      setActiveSubcategory("");
+    }
+  }, [categoriesList, activeCategory]);
+
+  const selectedCategoryObj = categoriesList.find((c) => c.name === activeCategory);
+
+  // Filter menu items by category and subcategory
+  const filteredMenu = menu.filter((item) => {
+    const matchesCat = item.category === activeCategory;
+    const matchesSub = activeSubcategory === "" || item.subcategory === activeSubcategory;
+    return matchesCat && matchesSub && item.available;
+  });
+
+  // Keep cart in a ref for the debounce callback to always see the latest value
+  const cartRef = useRef(cart);
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (!mesaNumero || !user) return;
+    if (cart.length === 0) return;
+
+    // Check if local cart is identical to Firestore activeOrder items to avoid redundant saves
+    const activeItems = activeOrder?.items ?? [];
+    const isIdentical =
+      activeItems.length === cart.length &&
+      cart.every((item, idx) => {
+        const other = activeItems[idx];
+        return (
+          other &&
+          other.platilloId === item.platilloId &&
+          other.cantidad === item.cantidad &&
+          other.precioUnitario === item.precioUnitario &&
+          (other.notas || "") === (item.notas || "")
+        );
+      });
+
+    if (isIdentical) return;
+
+    const delayDebounce = setTimeout(async () => {
+      setSaving(true);
+      try {
+        if (activeOrder) {
+          await updateOrderItems(activeOrder.id, cartRef.current);
+        } else {
+          // Prevent multiple concurrent creation calls
+          if (creationPending.current) return;
+          creationPending.current = true;
+          const newId = await createOrder(mesaNumero, cartRef.current, user.uid);
+          prevOrderId.current = newId;
+          creationPending.current = false;
+        }
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+      } finally {
+        setSaving(false);
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(delayDebounce);
+    };
+  }, [cart, mesaNumero, user, activeOrder, createOrder, updateOrderItems]);
 
   // ─── Cart helpers ──────────────────────────────────────────────────────────
 
@@ -81,7 +152,14 @@ export function OrderTakingView() {
   }
 
   function removeItem(platilloId: string) {
-    setCart((prev) => prev.filter((c) => c.platilloId !== platilloId));
+    setCart((prev) => {
+      const updated = prev.filter((c) => c.platilloId !== platilloId);
+      // If the cart becomes empty, clean it up immediately in Firestore
+      if (updated.length === 0 && activeOrder) {
+        updateOrderItems(activeOrder.id, []);
+      }
+      return updated;
+    });
   }
 
   function changeQuantity(platilloId: string, delta: number) {
@@ -89,24 +167,13 @@ export function OrderTakingView() {
       const updated = prev.map((c) =>
         c.platilloId === platilloId ? { ...c, cantidad: c.cantidad + delta } : c
       );
-      return updated.filter((c) => c.cantidad > 0);
-    });
-  }
-
-  // ─── Firestore save ────────────────────────────────────────────────────────
-
-  async function handleSaveOrder() {
-    if (!mesaNumero || cart.length === 0 || !user) return;
-    setSaving(true);
-    try {
-      if (activeOrder) {
-        await updateOrderItems(activeOrder.id, cart);
-      } else {
-        await createOrder(mesaNumero, cart, user.uid);
+      const filtered = updated.filter((c) => c.cantidad > 0);
+      // If the cart becomes empty, clean it up immediately in Firestore
+      if (filtered.length === 0 && activeOrder) {
+        updateOrderItems(activeOrder.id, []);
       }
-    } finally {
-      setSaving(false);
-    }
+      return filtered;
+    });
   }
 
   async function handleSendToPay() {
@@ -114,13 +181,18 @@ export function OrderTakingView() {
     setSaving(true);
     try {
       if (activeOrder) {
-        // First persist current cart, then set to por_pagar
+        // Persist local cart, then flag as por_pagar
         await updateOrderItems(activeOrder.id, cart);
         await updateOrderStatus(activeOrder.id, "por_pagar");
       } else {
         const newId = await createOrder(mesaNumero, cart, user.uid);
         await updateOrderStatus(newId, "por_pagar");
       }
+      // Redirect back to map
+      setActiveTableId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Error al enviar a caja.");
     } finally {
       setSaving(false);
     }
@@ -156,7 +228,9 @@ export function OrderTakingView() {
             className="form-select"
             style={{ width: "auto" }}
             value={activeTableId ?? ""}
-            onChange={(e) => setActiveTableId(e.target.value)}
+            onChange={(e) => {
+              setActiveTableId(e.target.value);
+            }}
           >
             {Array.from({ length: restaurantConfig?.tableCount ?? 12 }, (_, i) => (
               <option key={i + 1} value={String(i + 1)}>
@@ -166,19 +240,67 @@ export function OrderTakingView() {
           </select>
         </div>
 
+        {/* Main Category Tabs */}
         <div className="category-tabs">
-          {CATEGORIES.map((cat) => (
+          {categoriesList.map((cat) => (
             <button
-              key={cat}
+              key={cat.name}
               type="button"
-              className={`category-tab ${activeCategory === cat ? "category-tab--active" : ""}`}
-              onClick={() => setActiveCategory(cat)}
+              className={`category-tab ${activeCategory === cat.name ? "category-tab--active" : ""}`}
+              onClick={() => {
+                setActiveCategory(cat.name);
+                setActiveSubcategory("");
+              }}
             >
-              {CATEGORY_LABELS[cat]}
+              {cat.name}
             </button>
           ))}
         </div>
 
+        {/* Subcategory sub-tabs */}
+        {selectedCategoryObj && selectedCategoryObj.subcategories && selectedCategoryObj.subcategories.length > 0 && (
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap", padding: "0 0.25rem" }}>
+            <button
+              type="button"
+              style={{
+                padding: "0.35rem 0.85rem",
+                borderRadius: "999px",
+                border: "1px solid var(--color-border)",
+                background: activeSubcategory === "" ? "var(--color-secondary)" : "var(--color-surface)",
+                color: activeSubcategory === "" ? "white" : "var(--color-text-muted)",
+                fontSize: "0.8rem",
+                cursor: "pointer",
+                fontWeight: 600,
+                transition: "all 0.15s ease",
+              }}
+              onClick={() => setActiveSubcategory("")}
+            >
+              Todas
+            </button>
+            {selectedCategoryObj.subcategories.map((sub) => (
+              <button
+                key={sub}
+                type="button"
+                style={{
+                  padding: "0.35rem 0.85rem",
+                  borderRadius: "999px",
+                  border: "1px solid var(--color-border)",
+                  background: activeSubcategory === sub ? "var(--color-secondary)" : "var(--color-surface)",
+                  color: activeSubcategory === sub ? "white" : "var(--color-text-muted)",
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  transition: "all 0.15s ease",
+                }}
+                onClick={() => setActiveSubcategory(sub)}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Menu item cards */}
         <div className="menu-item-grid">
           {filteredMenu.map((item) => (
             <button
@@ -197,12 +319,23 @@ export function OrderTakingView() {
               </div>
             </button>
           ))}
+          {filteredMenu.length === 0 && (
+            <div style={{ gridColumn: "1/-1", padding: "3rem", textAlign: "center", color: "var(--color-text-muted)" }}>
+              No hay platillos disponibles en esta sección.
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Right: cart ───────────────────────────────────────────────────── */}
       <aside className="order-cart">
-        <div className="order-cart__header">Orden · Mesa {mesaNumero}</div>
+        <div className="order-cart__header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Orden · Mesa {mesaNumero}</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: 500, color: saving ? "var(--color-primary)" : "var(--color-success)" }}>
+            {saving ? "🔄 Guardando..." : "✓ Sincronizado"}
+          </span>
+        </div>
+        
         <div className="order-cart__body">
           {cart.length === 0 ? (
             <div className="order-cart__empty">Agrega platillos del menú</div>
@@ -219,11 +352,13 @@ export function OrderTakingView() {
                   <button
                     type="button"
                     className="qty-btn"
-                    onClick={() =>
-                      line.cantidad > 1
-                        ? changeQuantity(line.platilloId, -1)
-                        : removeItem(line.platilloId)
-                    }
+                    onClick={() => {
+                      if (line.cantidad > 1) {
+                        changeQuantity(line.platilloId, -1);
+                      } else {
+                        removeItem(line.platilloId);
+                      }
+                    }}
                   >
                     −
                   </button>
@@ -231,7 +366,9 @@ export function OrderTakingView() {
                   <button
                     type="button"
                     className="qty-btn"
-                    onClick={() => changeQuantity(line.platilloId, 1)}
+                    onClick={() => {
+                      changeQuantity(line.platilloId, 1);
+                    }}
                   >
                     +
                   </button>
@@ -242,7 +379,7 @@ export function OrderTakingView() {
         </div>
 
         {cart.length > 0 && (
-          <div className="order-cart__footer">
+          <div className="order-cart__footer order-cart__footer--desktop">
             <div
               style={{
                 display: "flex",
@@ -255,16 +392,34 @@ export function OrderTakingView() {
               <span>{formatCurrency(cartTotal)}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <Button variant="outline" block onClick={handleSaveOrder} disabled={saving}>
-                {saving ? "Guardando..." : "Guardar orden"}
-              </Button>
               <Button variant="primary" block onClick={handleSendToPay} disabled={saving}>
-                {saving ? "..." : "Enviar a caja"}
+                {saving ? "Procesando..." : "Enviar a caja"}
               </Button>
             </div>
           </div>
         )}
       </aside>
+
+      {/* Floating mobile button */}
+      {cart.length > 0 && (
+        <div className="mobile-floating-bar">
+          <Button
+            variant="primary"
+            block
+            size="lg"
+            onClick={handleSendToPay}
+            disabled={saving}
+            style={{
+              backgroundColor: "#e85d04",
+              borderColor: "#e85d04",
+              boxShadow: "0 10px 25px -5px rgba(232, 93, 4, 0.4)",
+              fontWeight: 700
+            }}
+          >
+            {saving ? "Procesando..." : `Enviar a Caja (${formatCurrency(cartTotal)})`}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

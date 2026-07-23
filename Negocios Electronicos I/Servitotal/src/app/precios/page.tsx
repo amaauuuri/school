@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/lib/AuthContext";
 
 const DETAILED_PLANS = [
   {
@@ -82,6 +84,41 @@ const WORKFLOW_STEPS = [
 ];
 
 export default function PreciosPage() {
+  const { user } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  async function handleSelectPlan(planId: string) {
+    if (!user) {
+      window.location.href = `/registro?plan=${planId}`;
+      return;
+    }
+
+    setLoadingPlan(planId);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          userId: user.uid,
+          userEmail: user.email,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Error al iniciar el pago con Stripe.");
+        setLoadingPlan(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de conexión al procesar el pago.");
+      setLoadingPlan(null);
+    }
+  }
+
   return (
     <PublicLayout>
       {/* Hero Section */}
@@ -136,11 +173,15 @@ export default function PreciosPage() {
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <Link href="/registro">
-                  <Button variant={plan.highlighted ? "primary" : "outline"} block size="lg">
-                    Comenzar con {plan.name}
-                  </Button>
-                </Link>
+                <Button
+                  variant={plan.highlighted ? "primary" : "outline"}
+                  block
+                  size="lg"
+                  onClick={() => handleSelectPlan(plan.id)}
+                  disabled={loadingPlan !== null}
+                >
+                  {loadingPlan === plan.id ? "Procesando..." : `Comenzar con ${plan.name}`}
+                </Button>
               </div>
             ))}
           </div>

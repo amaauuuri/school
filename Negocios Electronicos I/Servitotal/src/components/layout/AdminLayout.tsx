@@ -29,15 +29,18 @@ export function AdminSidebar() {
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <aside className="dashboard-sidebar">
         <div className="dashboard-sidebar__header">
-          <Link href="/admin/menu" className="public-header__logo">
+          <Link href="/admin/menu" className="public-header__logo dashboard-sidebar__brand">
             <span className="public-header__logo-icon">S</span>
+<<<<<<< HEAD
             <span className="dashboard-sidebar__logo-text">Servitotal</span>
+=======
+            <span className="dashboard-sidebar__label">Servitotal</span>
+>>>>>>> 17990bd (Penultima revision)
           </Link>
-          <div className="dashboard-sidebar__restaurant">
-            Panel Admin · {restaurantName}
+          <div className="dashboard-sidebar__restaurant dashboard-sidebar__label">
+            Admin · {restaurantName}
           </div>
         </div>
 
@@ -49,34 +52,44 @@ export function AdminSidebar() {
               className={`dashboard-sidebar__link ${
                 pathname.startsWith(item.href) ? "dashboard-sidebar__link--active" : ""
               }`}
+              title={item.label}
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
+<<<<<<< HEAD
               <span className="dashboard-sidebar__link-text">{item.label}</span>
+=======
+              <span className="dashboard-sidebar__label">{item.label}</span>
+>>>>>>> 17990bd (Penultima revision)
             </Link>
           ))}
         </nav>
 
         <div className="dashboard-sidebar__footer">
-          <Link href="/dashboard/mesas" className="dashboard-sidebar__link">
+          <Link href="/dashboard/mesas" className="dashboard-sidebar__link" title="Vista Operativa">
             <span className="dashboard-sidebar__link-icon">🪑</span>
+<<<<<<< HEAD
             <span className="dashboard-sidebar__link-text">Vista Operativa</span>
+=======
+            <span className="dashboard-sidebar__label">Vista Operativa</span>
+>>>>>>> 17990bd (Penultima revision)
           </Link>
-          <a href="#" onClick={handleLogout} className="dashboard-sidebar__link">
+          <a href="#" onClick={handleLogout} className="dashboard-sidebar__link" title="Salir">
             <span className="dashboard-sidebar__link-icon">↩</span>
+<<<<<<< HEAD
             <span className="dashboard-sidebar__link-text">Salir</span>
+=======
+            <span className="dashboard-sidebar__label">Salir</span>
+>>>>>>> 17990bd (Penultima revision)
           </a>
         </div>
       </aside>
 
-      {/* Mobile Bottom Navigation */}
       <nav className="mobile-bottom-nav">
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`mobile-nav-item ${
-              pathname.startsWith(item.href) ? "mobile-nav-item--active" : ""
-            }`}
+            className={`mobile-nav-item ${pathname.startsWith(item.href) ? "mobile-nav-item--active" : ""}`}
           >
             <span>{item.icon}</span>
             {item.label}
@@ -110,9 +123,7 @@ export function AdminShell({ children, title, actions }: AdminShellProps) {
           <header className="dashboard-topbar">
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <h1 className="dashboard-topbar__title">{title}</h1>
-              <span className="badge badge--neutral" style={{ fontSize: "0.75rem" }}>
-                {restaurantName}
-              </span>
+              <span className="badge badge--neutral" style={{ fontSize: "0.75rem" }}>{restaurantName}</span>
             </div>
             {actions && <div className="dashboard-topbar__meta">{actions}</div>}
           </header>

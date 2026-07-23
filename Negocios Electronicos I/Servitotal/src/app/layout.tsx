@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { ServitotalProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/AuthContext";
 import { FirestoreProvider } from "@/lib/FirestoreContext";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Servitotal — POS para Restaurantes",
@@ -17,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>
+      <body className={inter.className}>
         <AuthProvider>
           <FirestoreProvider>
             <ServitotalProvider>{children}</ServitotalProvider>

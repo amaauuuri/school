@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency, useServitotalStore } from "@/lib/store";
@@ -21,6 +21,9 @@ export function CashRegisterView() {
 
   const { activeTableId, setActiveTableId } = useServitotalStore();
   const { activeOrders, restaurantConfig, closeOrderAndRecord } = useFirestore();
+  const activeOrdersRef = useRef(activeOrders);
+
+  activeOrdersRef.current = activeOrders;
 
   // Orders waiting to be paid
   const pendingOrders = activeOrders.filter((o) => o.status === "por_pagar");
@@ -43,12 +46,23 @@ export function CashRegisterView() {
     try {
       await closeOrderAndRecord(selectedOrder, paymentMethod);
       setClosedMsg(true);
-      // Clear active table selection, navigate back
+
+      const closedOrderId = selectedOrder.id;
+
       setTimeout(() => {
         setClosedMsg(false);
         setClosing(false);
-        setActiveTableId(null);
-        router.push("/dashboard/mesas");
+
+        const nextPending = activeOrdersRef.current
+          .filter((o) => o.status === "por_pagar" && o.id !== closedOrderId)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+        if (nextPending.length > 0) {
+          setActiveTableId(String(nextPending[0].mesaNumero));
+        } else {
+          setActiveTableId(null);
+          router.push("/dashboard/mesas");
+        }
       }, 1500);
     } catch (err) {
       console.error("Error closing table:", err);
@@ -97,7 +111,8 @@ export function CashRegisterView() {
           )}
         </div>
 
-        <table className="data-table">
+        <div className="card-table-wrapper">
+          <table className="data-table">
           <thead>
             <tr>
               <th>Platillo</th>
@@ -117,6 +132,7 @@ export function CashRegisterView() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* ── Right: payment summary ────────────────────────────────────────── */}

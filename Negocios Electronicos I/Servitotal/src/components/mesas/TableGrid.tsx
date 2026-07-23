@@ -37,16 +37,18 @@ interface TableCardProps {
   table: DerivedTable;
   selected: boolean;
   onSelect: (table: DerivedTable) => void;
+  onTomarOrden: (table: DerivedTable) => void;
+  onEnviarCaja: (table: DerivedTable) => void;
 }
 
-function TableCard({ table, selected, onSelect }: TableCardProps) {
+function TableCard({ table, selected, onSelect, onTomarOrden, onEnviarCaja }: TableCardProps) {
   return (
-    <button
-      type="button"
+    <div
       className={`table-card table-card--${table.status} ${
         selected ? "table-card--selected" : ""
       }`}
       onClick={() => onSelect(table)}
+      style={{ position: "relative" }}
     >
       <span className="table-card__number">Mesa {table.mesaNumero}</span>
       <Badge variant={statusBadgeVariant(table.status)}>
@@ -57,7 +59,46 @@ function TableCard({ table, selected, onSelect }: TableCardProps) {
           {formatCurrency(table.totalAmount)}
         </span>
       )}
-    </button>
+
+      {/* Hover action overlay for desktop */}
+      <div className="table-card-overlay">
+        <button
+          type="button"
+          className="btn btn--primary btn--sm"
+          style={{
+            width: "100%",
+            fontSize: "0.75rem",
+            padding: "0.375rem 0.5rem",
+            backgroundColor: "#e85d04",
+            borderColor: "#e85d04",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTomarOrden(table);
+          }}
+        >
+          Tomar Orden
+        </button>
+
+        {table.orderId && table.status !== "por_pagar" && table.status !== "disponible" && (
+          <button
+            type="button"
+            className="btn btn--secondary btn--sm"
+            style={{
+              width: "100%",
+              fontSize: "0.75rem",
+              padding: "0.375rem 0.5rem",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnviarCaja(table);
+            }}
+          >
+            Enviar a Caja
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -66,7 +107,7 @@ function TableCard({ table, selected, onSelect }: TableCardProps) {
 export function TableGrid() {
   const router = useRouter();
   const { activeTableId, setActiveTableId } = useServitotalStore();
-  const { activeOrders, restaurantConfig, loadingData } = useFirestore();
+  const { activeOrders, restaurantConfig, updateOrderStatus, loadingData } = useFirestore();
 
   const tableCount = restaurantConfig?.tableCount ?? 12;
 
@@ -98,6 +139,22 @@ export function TableGrid() {
 
   function handleSelect(table: DerivedTable) {
     setActiveTableId(String(table.mesaNumero));
+  }
+
+  function handleTomarOrden(table: DerivedTable) {
+    setActiveTableId(String(table.mesaNumero));
+    router.push("/dashboard/ordenes");
+  }
+
+  async function handleEnviarCaja(table: DerivedTable) {
+    if (table.orderId) {
+      try {
+        await updateOrderStatus(table.orderId, "por_pagar");
+      } catch (err) {
+        console.error("Error setting table status to por_pagar:", err);
+        alert("No se pudo enviar la orden a caja.");
+      }
+    }
   }
 
   function handleGoToOrders() {
@@ -141,6 +198,8 @@ export function TableGrid() {
             table={table}
             selected={activeTableId === String(table.mesaNumero)}
             onSelect={handleSelect}
+            onTomarOrden={handleTomarOrden}
+            onEnviarCaja={handleEnviarCaja}
           />
         ))}
       </div>

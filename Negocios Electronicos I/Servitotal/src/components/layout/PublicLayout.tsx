@@ -4,16 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/lib/AuthContext";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
-  { href: "/precios", label: "Precios y Servicios" },
-  { href: "/contacto", label: "Nosotros y Contacto" },
+  { href: "/servicios", label: "Servicios" },
+  { href: "/nosotros", label: "Sobre Nosotros" },
+  { href: "/contacto", label: "Contacto" },
 ];
 
 export function PublicHeader() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, profile } = useAuth();
+
+  // Dinámicamente a /dashboard (que redirige a /dashboard/mesas) o /admin/menu si es Admin, o a /login
+  const consoleLink = user ? (profile?.role === "ADMIN" ? "/admin/menu" : "/dashboard") : "/login";
 
   return (
     <header className="public-header">
@@ -40,11 +46,17 @@ export function PublicHeader() {
 
         {/* Header Actions */}
         <div className="public-header__actions">
-          <Link href="/login" className="hide-mobile">
-            <Button variant="ghost">Iniciar sesión</Button>
-          </Link>
-          <Link href="/registro">
-            <Button variant="primary">Registrarse</Button>
+          <Link href={consoleLink}>
+            <Button
+              variant="primary"
+              style={{
+                backgroundColor: "#e85d04",
+                borderColor: "#e85d04",
+                fontWeight: 600,
+              }}
+            >
+              Consola
+            </Button>
           </Link>
           
           {/* Mobile Hamburger Toggle Button */}
@@ -53,35 +65,50 @@ export function PublicHeader() {
             className="mobile-burger-btn"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Abrir menú"
+            style={{
+              background: "transparent",
+              border: "none",
+              fontSize: "1.75rem",
+              color: "var(--color-secondary)",
+              cursor: "pointer",
+              marginLeft: "0.5rem"
+            }}
           >
             {mobileOpen ? "✕" : "☰"}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {mobileOpen && (
-        <div className="public-mobile-drawer">
-          <nav className="public-mobile-nav">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`public-mobile-nav__link ${
-                  pathname === link.href ? "public-mobile-nav__link--active" : ""
-                }`}
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <hr style={{ borderColor: "var(--color-border)", margin: "0.5rem 0" }} />
-            <Link href="/login" onClick={() => setMobileOpen(false)}>
-              <Button variant="ghost" block>Iniciar sesión</Button>
+      {/* Mobile Drawer Menu with smooth CSS transitions */}
+      <div className={`public-mobile-drawer ${mobileOpen ? "public-mobile-drawer--open" : ""}`}>
+        <nav className="public-mobile-nav">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`public-mobile-nav__link ${
+                pathname === link.href ? "public-mobile-nav__link--active" : ""
+              }`}
+              onClick={() => setMobileOpen(false)}
+            >
+              {link.label}
             </Link>
-          </nav>
-        </div>
-      )}
+          ))}
+          <hr style={{ borderColor: "var(--color-border)", margin: "1rem 0" }} />
+          <Link href={consoleLink} onClick={() => setMobileOpen(false)}>
+            <Button
+              variant="primary"
+              block
+              style={{
+                backgroundColor: "#e85d04",
+                borderColor: "#e85d04",
+              }}
+            >
+              Consola
+            </Button>
+          </Link>
+        </nav>
+      </div>
     </header>
   );
 }
@@ -93,19 +120,19 @@ export function PublicFooter() {
         <div className="public-footer__grid">
           <div className="public-footer__brand">
             <div className="public-header__logo">
-              <span className="public-header__logo-icon">S</span>
-              Servitotal
+              <span className="public-header__logo-icon" style={{ color: "white" }}>S</span>
+              <span style={{ color: "white" }}>Servitotal</span>
             </div>
-            <p>
+            <p style={{ marginTop: "1rem", opacity: 0.8, fontSize: "0.9375rem" }}>
               El POS en la nube diseñado para restaurantes que quieren operar
               más rápido y vender más.
             </p>
           </div>
           <div className="public-footer__col">
             <h4>Producto</h4>
-            <Link href="/">Funcionalidades</Link>
-            <Link href="/precios">Precios y Servicios</Link>
-            <Link href="/contacto">Nosotros</Link>
+            <Link href="/">Inicio</Link>
+            <Link href="/servicios">Servicios</Link>
+            <Link href="/nosotros">Sobre Nosotros</Link>
           </div>
           <div className="public-footer__col">
             <h4>Cuenta</h4>
@@ -115,7 +142,7 @@ export function PublicFooter() {
           <div className="public-footer__col">
             <h4>Soporte</h4>
             <a href="mailto:servi.tootal@gmail.com">servi.tootal@gmail.com</a>
-            <Link href="/contacto">Centro de contacto</Link>
+            <Link href="/contacto">Contacto</Link>
           </div>
         </div>
         <div className="public-footer__bottom">
@@ -130,7 +157,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <PublicHeader />
-      <main style={{ flex: 1 }}>{children}</main>
+      <main style={{ flex: 1, paddingTop: "80px" }}>{children}</main>
       <PublicFooter />
     </div>
   );

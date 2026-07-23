@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useFirestore } from "@/lib/FirestoreContext";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   const { user, profile, loading, reloadUser, resendVerificationEmail, logout } = useAuth();
+  const { restaurantConfig, loadingData } = useFirestore();
   const router = useRouter();
   const [checking, setChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -23,6 +25,15 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  // Redirect to precios if not subscribed
+  useEffect(() => {
+    if (!loading && user && user.emailVerified && !loadingData) {
+      if (!restaurantConfig || restaurantConfig.status !== "SUBSCRIBED") {
+        router.push("/precios");
+      }
+    }
+  }, [user, loading, restaurantConfig, loadingData, router]);
 
   // Handle Resend Cooldown timer
   useEffect(() => {
@@ -39,7 +50,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     }
   }, [user, profile, loading, requireAdmin, router]);
 
-  if (loading) {
+  if (loading || (user && user.emailVerified && loadingData)) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
         <div className="text-muted">Cargando aplicación...</div>
@@ -48,6 +59,11 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   }
 
   if (!user) {
+    return null; // Will redirect in useEffect
+  }
+
+  // Redirect if not subscribed
+  if (user.emailVerified && (!restaurantConfig || restaurantConfig.status !== "SUBSCRIBED")) {
     return null; // Will redirect in useEffect
   }
 

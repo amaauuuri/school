@@ -137,7 +137,7 @@ export function RestaurantSettingsView() {
                 <label className="form-label">Dirección</label>
                 <input
                   className="form-input"
-                  placeholder="ej. Av. Reforma #123, Col. Centro"
+                  placeholder="Ingresa la dirección física del restaurante (ej. Av. Reforma #123, Col. Centro, Puebla)"
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                 />
@@ -188,16 +188,22 @@ export function RestaurantSettingsView() {
 
               <div className="form-group">
                 <label className="form-label">Tasa de Impuesto (IVA)</label>
-                <div
+                <input
+                  type="text"
                   className="form-input"
+                  value="16% (IVA Fijo)"
+                  readOnly
+                  disabled
                   style={{
                     background: "var(--color-bg)",
                     color: "var(--color-text-muted)",
                     fontWeight: 600,
+                    cursor: "not-allowed",
                   }}
-                >
-                  Fijo al 16% (Calculado automáticamente en caja)
-                </div>
+                />
+                <span className="text-sm text-muted">
+                  Tasa impositiva del 16% de IVA no modificable para cumplimiento de reglamentos.
+                </span>
               </div>
             </div>
           </div>

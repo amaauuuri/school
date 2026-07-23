@@ -1,24 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { CATEGORY_LABELS, formatCurrency } from "@/lib/store";
+import { formatCurrency } from "@/lib/store";
 import { useFirestore } from "@/lib/FirestoreContext";
-import type { MenuCategory, MenuItem } from "@/lib/types";
+import type { MenuItem } from "@/lib/types";
+
+const DEFAULT_CATEGORIES = ["Alimentos", "Bebidas", "Postres"];
+
+function normalizeCategories(raw: unknown): string[] {
+  if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_CATEGORIES;
+  return raw.map((item) => (typeof item === "string" ? item : (item as { name: string }).name)).filter(Boolean);
+}
 
 const EMPTY_FORM = {
   name: "",
   description: "",
   price: "",
-  category: "alimentos" as MenuCategory,
+  category: "Alimentos",
   available: true,
 };
 
+<<<<<<< HEAD
 // Robust CSV Parsing helper
 function parseCSV(text: string): any[] {
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
   if (lines.length === 0) return [];
+=======
+export function MenuManagementView() {
+  const { menu, addMenuItem, updateMenuItem, deleteMenuItem, restaurantConfig, updateRestaurantConfig, loadingData } =
+    useFirestore();
+>>>>>>> 17990bd (Penultima revision)
 
   const splitCSVRow = (rowText: string) => {
     const result = [];
@@ -74,6 +87,7 @@ export function MenuManagementView() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
+<<<<<<< HEAD
   // Import states
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -82,10 +96,23 @@ export function MenuManagementView() {
   >([]);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+=======
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [localCategories, setLocalCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [newCatName, setNewCatName] = useState("");
+  const [editingCatIndex, setEditingCatIndex] = useState<number | null>(null);
+  const [editingCatValue, setEditingCatValue] = useState("");
+
+  const categoriesList = normalizeCategories((restaurantConfig as { customCategories?: unknown })?.customCategories);
+
+  useEffect(() => {
+    setLocalCategories(categoriesList);
+  }, [restaurantConfig]);
+>>>>>>> 17990bd (Penultima revision)
 
   function openCreate() {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, category: categoriesList[0] || "Alimentos" });
     setModalOpen(true);
   }
 
@@ -111,22 +138,17 @@ export function MenuManagementView() {
     if (!form.name || isNaN(price)) return;
     setSaving(true);
     try {
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price,
+        category: form.category,
+        available: form.available,
+      };
       if (editingId) {
-        await updateMenuItem(editingId, {
-          name: form.name,
-          description: form.description,
-          price,
-          category: form.category,
-          available: form.available,
-        });
+        await updateMenuItem(editingId, payload);
       } else {
-        await addMenuItem({
-          name: form.name,
-          description: form.description,
-          price,
-          category: form.category,
-          available: form.available,
-        });
+        await addMenuItem(payload);
       }
       setModalOpen(false);
     } finally {
@@ -150,6 +172,7 @@ export function MenuManagementView() {
     await updateMenuItem(item.id, { available: !item.available });
   }
 
+<<<<<<< HEAD
   // AI Import handling
   const handleFileParse = async (file: File) => {
     setImportError(null);
@@ -275,6 +298,52 @@ export function MenuManagementView() {
     setIsDragging(false);
   }
 
+=======
+  function handleAddCategory() {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    if (localCategories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      alert("La categoría ya existe");
+      return;
+    }
+    setLocalCategories([...localCategories, trimmed]);
+    setNewCatName("");
+  }
+
+  function handleDeleteCategory(catIndex: number) {
+    setLocalCategories(localCategories.filter((_, idx) => idx !== catIndex));
+  }
+
+  function startEditCategory(index: number) {
+    setEditingCatIndex(index);
+    setEditingCatValue(localCategories[index]);
+  }
+
+  function saveEditCategory() {
+    if (editingCatIndex === null) return;
+    const trimmed = editingCatValue.trim();
+    if (!trimmed) return;
+    const updated = [...localCategories];
+    updated[editingCatIndex] = trimmed;
+    setLocalCategories(updated);
+    setEditingCatIndex(null);
+    setEditingCatValue("");
+  }
+
+  async function handleSaveCategories() {
+    setSaving(true);
+    try {
+      await updateRestaurantConfig({ customCategories: localCategories } as Record<string, unknown>);
+      setCatModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar categorías.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+>>>>>>> 17990bd (Penultima revision)
   if (loadingData) {
     return (
       <div style={{ padding: "2rem", color: "var(--color-text-muted)", textAlign: "center" }}>
@@ -286,6 +355,7 @@ export function MenuManagementView() {
   return (
     <>
       <div className="page-header">
+<<<<<<< HEAD
         <p className="text-muted">{menu.length} platillos en el menú</p>
         <div className="page-header__actions" style={{ display: "flex", gap: "0.5rem" }}>
           <Button variant="outline" onClick={() => setImportModalOpen(true)}>
@@ -294,10 +364,42 @@ export function MenuManagementView() {
           <Button variant="primary" onClick={openCreate}>
             + Agregar platillo
           </Button>
+=======
+        <p className="text-muted">{menu.length} platillos</p>
+        <div className="page-header__actions" style={{ display: "flex", gap: "0.5rem" }}>
+          <Button variant="outline" onClick={() => setCatModalOpen(true)}>📁 Categorías</Button>
+          <Button variant="primary" onClick={openCreate}>+ Agregar platillo</Button>
+>>>>>>> 17990bd (Penultima revision)
         </div>
       </div>
 
-      <div className="card card-table-wrapper" style={{ padding: 0 }}>
+      {/* Mobile cards */}
+      <div className="menu-admin-cards">
+        {menu.map((item) => (
+          <div key={item.id} className="menu-admin-card">
+            <div className="menu-admin-card__header">
+              <div>
+                <strong>{item.name}</strong>
+                <div className="text-sm text-muted">{item.description}</div>
+              </div>
+              <button type="button" className={`toggle ${item.available ? "toggle--on" : ""}`} onClick={() => toggleAvailability(item)} aria-label="Disponibilidad">
+                <span className="toggle__knob" />
+              </button>
+            </div>
+            <div className="text-sm" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <span><strong>{formatCurrency(item.price)}</strong></span>
+              <span className="badge badge--neutral" style={{ textTransform: "none" }}>{item.category}</span>
+            </div>
+            <div className="menu-admin-card__actions">
+              <Button variant="outline" size="sm" onClick={() => openEdit(item)}>Editar</Button>
+              <Button variant="danger" size="sm" onClick={() => openDeleteConfirm(item)}>Eliminar</Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="menu-admin-table card card-table-wrapper" style={{ padding: 0 }}>
         <table className="data-table">
           <thead>
             <tr>
@@ -315,26 +417,17 @@ export function MenuManagementView() {
                   <strong>{item.name}</strong>
                   <div className="text-sm text-muted">{item.description}</div>
                 </td>
-                <td>{CATEGORY_LABELS[item.category]}</td>
+                <td>{item.category}</td>
                 <td>{formatCurrency(item.price)}</td>
                 <td>
-                  <button
-                    type="button"
-                    className={`toggle ${item.available ? "toggle--on" : ""}`}
-                    onClick={() => toggleAvailability(item)}
-                    aria-label="Toggle disponibilidad"
-                  >
+                  <button type="button" className={`toggle ${item.available ? "toggle--on" : ""}`} onClick={() => toggleAvailability(item)} aria-label="Toggle disponibilidad">
                     <span className="toggle__knob" />
                   </button>
                 </td>
-                <td>
+                <td style={{ whiteSpace: "nowrap" }}>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
-                      Editar
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => openDeleteConfirm(item)}>
-                      Eliminar
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => openEdit(item)}>Editar</Button>
+                    <Button variant="danger" size="sm" onClick={() => openDeleteConfirm(item)}>Eliminar</Button>
                   </div>
                 </td>
               </tr>
@@ -343,17 +436,14 @@ export function MenuManagementView() {
         </table>
       </div>
 
-      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingId ? "Editar platillo" : "Nuevo platillo"}
         footer={
           <>
-            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button variant="primary" onClick={handleSave} disabled={saving}>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button variant="primary" onClick={handleSave} disabled={saving} style={{ backgroundColor: "#e85d04", borderColor: "#e85d04" }}>
               {saving ? "Guardando..." : "Guardar"}
             </Button>
           </>
@@ -362,45 +452,22 @@ export function MenuManagementView() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div className="form-group">
             <label className="form-label">Nombre</label>
-            <input
-              className="form-input"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+            <input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="ej. Tacos al Pastor" />
           </div>
           <div className="form-group">
             <label className="form-label">Descripción</label>
-            <textarea
-              className="form-textarea"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
+            <textarea className="form-textarea" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ingredientes y porciones..." />
           </div>
           <div className="form-row form-row--2">
             <div className="form-group">
               <label className="form-label">Precio (MXN)</label>
-              <input
-                type="number"
-                className="form-input"
-                min="0"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-              />
+              <input type="number" className="form-input" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             </div>
             <div className="form-group">
               <label className="form-label">Categoría</label>
-              <select
-                className="form-select"
-                value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value as MenuCategory })
-                }
-              >
-                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
+              <select className="form-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                {categoriesList.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
@@ -408,26 +475,62 @@ export function MenuManagementView() {
         </div>
       </Modal>
 
-      {/* ── Delete Confirm Modal ────────────────────────────────────────────── */}
+      <Modal
+        open={catModalOpen}
+        onClose={() => setCatModalOpen(false)}
+        title="Gestionar categorías"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCatModalOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button variant="primary" onClick={handleSaveCategories} disabled={saving} style={{ backgroundColor: "#e85d04", borderColor: "#e85d04" }}>
+              {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <input className="form-input" style={{ flex: 1 }} placeholder="Nueva categoría (ej. Entradas)" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
+            <Button variant="outline" onClick={handleAddCategory}>+ Crear</Button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {localCategories.length === 0 ? (
+              <p className="text-sm text-muted">No hay categorías.</p>
+            ) : (
+              localCategories.map((cat, idx) => (
+                <div key={cat + idx} style={{ display: "flex", gap: "0.5rem", alignItems: "center", padding: "0.75rem", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", background: "var(--color-bg)" }}>
+                  {editingCatIndex === idx ? (
+                    <>
+                      <input className="form-input" style={{ flex: 1 }} value={editingCatValue} onChange={(e) => setEditingCatValue(e.target.value)} />
+                      <Button variant="primary" size="sm" onClick={saveEditCategory}>OK</Button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flex: 1, fontWeight: 600 }}>{cat}</span>
+                      <Button variant="outline" size="sm" onClick={() => startEditCategory(idx)}>Editar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteCategory(idx)} style={{ color: "var(--color-danger)" }}>Eliminar</Button>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         open={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         title="Eliminar platillo"
         footer={
           <>
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button variant="danger" onClick={handleDeleteConfirm} disabled={saving}>
-              {saving ? "Eliminando..." : "Sí, eliminar"}
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button variant="danger" onClick={handleDeleteConfirm} disabled={saving}>{saving ? "Eliminando..." : "Sí, eliminar"}</Button>
           </>
         }
       >
-        <p>
-          ¿Estás seguro de que deseas eliminar{" "}
-          <strong>{deletingItem?.name}</strong>? Esta acción no se puede deshacer.
-        </p>
+        <p>¿Eliminar <strong>{deletingItem?.name}</strong>? Esta acción no se puede deshacer.</p>
       </Modal>
 
       {/* ── AI Import Modal ─────────────────────────────────────────────────── */}

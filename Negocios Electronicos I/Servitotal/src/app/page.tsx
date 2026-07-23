@@ -3,124 +3,160 @@
 import Link from "next/link";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/Button";
+import { RestaurantFlowAnimation } from "@/components/landing/RestaurantFlowAnimation";
+import { RoleAnimatedIcon } from "@/components/landing/RoleAnimatedIcon";
 
 const BENEFICIOS = [
   {
     icon: "⚡",
-    title: "Mesas Ocupadas y Por Pagar en Tiempo Real",
-    description:
-      "Toda tu plantilla ve instantáneamente el estado de cada mesa gracias a la sincronización en tiempo real con Firebase Firestore.",
+    title: "Mesas en tiempo real",
+    description: "Estado de cada mesa sincronizado al instante con Firestore.",
   },
   {
     icon: "📱",
-    title: "Toma de Comandas desde Cualquier Dispositivo",
-    description:
-      "Tus meseros pueden usar su teléfono celular, tablet o laptop sin necesidad de instalar aplicaciones pesadas.",
+    title: "Comandas desde cualquier dispositivo",
+    description: "Toma órdenes desde celular, tablet o laptop sin instalar apps.",
   },
   {
     icon: "💳",
-    title: "Cobro Ágil en Caja con IVA (16%) Automatizado",
-    description:
-      "Calcula totales al instante, aplica el 16% de IVA y registra pagos en efectivo, tarjeta o transferencia.",
+    title: "Caja con IVA al 16%",
+    description: "Totales, impuesto y cobros en efectivo, tarjeta o transferencia.",
   },
   {
     icon: "📊",
-    title: "Métricas de Ventas y Platillos Más Vendidos",
-    description:
-      "Toma decisiones estratégicas consultando tus ingresos por hora y el rendimiento diario de tu cocina.",
+    title: "Métricas de ventas",
+    description: "Ingresos por hora y platillos más vendidos en tu panel.",
   },
   {
     icon: "🛠️",
-    title: "Configuración y Menú Limpio a tu Medida",
-    description:
-      "Agrega tus propios platillos, precios y mesas sin textos de prueba prellenados. Tú tienes el control total.",
+    title: "Menú personalizable",
+    description: "Platillos, precios y mesas configurables para tu negocio.",
   },
   {
     icon: "👥",
-    title: "Gestión de Personal con Accesos Seguros",
-    description:
-      "Crea cuentas para tu staff con roles delimitados para que el personal operativo sólo acceda a la toma de órdenes.",
+    title: "Accesos por rol",
+    description: "Cuentas de staff con permisos limitados a su área.",
+  },
+];
+
+const ROLES_FLUX = [
+  {
+    role: "comensal" as const,
+    label: "Comensal",
+    title: "Servicio rápido y sin esperas",
+    description: "La orden llega al instante y el platillo se sirve a tiempo.",
+    align: "left" as const,
+  },
+  {
+    role: "mesero" as const,
+    label: "Mesero",
+    title: "Comandas con un toque",
+    description: "Registra pedidos desde el móvil y envíalos directo a cocina.",
+    align: "right" as const,
+  },
+  {
+    role: "caja" as const,
+    label: "Caja",
+    title: "Cobros ágiles con IVA incluido",
+    description: "Cuentas actualizadas al segundo con el 16% de IVA automático.",
+    align: "left" as const,
+  },
+  {
+    role: "dueno" as const,
+    label: "Dueño",
+    title: "Visión total del negocio",
+    description: "Supervisa ventas, staff y operación desde cualquier lugar.",
+    align: "right" as const,
   },
 ];
 
 export default function HomePage() {
   return (
     <PublicLayout>
-      {/* Hero Section */}
-      <section className="hero">
+      <section className="hero" style={{ padding: "5rem 0" }}>
         <div className="container hero__grid">
           <div>
             <span className="badge badge--primary" style={{ marginBottom: "1rem" }}>
-              El POS ideal para restaurantes modernos
+              POS para restaurantes modernos
             </span>
-            <h1 className="hero__title heading-serif" style={{ fontSize: "3rem", lineHeight: "1.15" }}>
-              El sistema inteligente que acelera tu restaurante
+            <h1 className="hero__title heading-serif" style={{ fontSize: "2.75rem", lineHeight: "1.2" }}>
+              El sistema que acelera tu restaurante
             </h1>
             <p className="hero__subtitle">
-              Servitotal conecta la toma de órdenes, la caja y la administración en tiempo real. Diseñado para ofrecer máxima velocidad en horas pico.
+              Conecta órdenes, caja y administración en tiempo real. Diseñado para horas pico.
             </p>
             <div className="hero__actions">
               <Link href="/registro">
-                <Button variant="primary" size="lg">
-                  Comenzar ahora
-                </Button>
+                <Button variant="primary" size="lg">Comenzar ahora</Button>
               </Link>
-              <Link href="/precios">
-                <Button variant="outline" size="lg">
-                  Ver planes y servicios
-                </Button>
+              <Link href="/servicios">
+                <Button variant="outline" size="lg">Ver planes</Button>
               </Link>
             </div>
           </div>
-
-          <div className="hero__visual">
-            <div className="hero__mock-dashboard">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <div
-                  key={n}
-                  className="hero__mock-table"
-                  style={{
-                    background:
-                      n === 3
-                        ? "var(--color-warning-light)"
-                        : n === 6
-                          ? "var(--color-danger-light)"
-                          : "var(--color-success-light)",
-                    border: `2px solid ${
-                      n === 3
-                        ? "var(--color-warning)"
-                        : n === 6
-                          ? "var(--color-danger)"
-                          : "var(--color-success)"
-                    }`,
-                  }}
-                >
-                  Mesa {n}
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-muted" style={{ textAlign: "center", marginTop: "1rem" }}>
-              Mapa dinámico de mesas en tiempo real
-            </p>
+          <div style={{ width: "100%" }}>
+            <RestaurantFlowAnimation />
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="section">
+      <section className="section" style={{ background: "var(--color-surface)", borderBottom: "1px solid var(--color-border)" }}>
         <div className="container">
           <div className="section__header">
-            <h2 className="section__title heading-serif">
-              Beneficios de transformar tu operación con Servitotal
-            </h2>
+            <span className="badge badge--neutral" style={{ marginBottom: "0.5rem" }}>Roles del sistema</span>
+            <h2 className="section__title heading-serif">Una herramienta, múltiples soluciones</h2>
             <p className="text-muted text-lg">
-              Diseñado por Zaira & Amauri para eliminar la fricción en el servicio de restaurante.
+              Cada rol tiene lo que necesita para operar con fluidez.
             </p>
           </div>
 
+          <div style={{ display: "flex", flexDirection: "column", gap: "4rem", marginTop: "2.5rem" }}>
+            {ROLES_FLUX.map((item) => (
+              <div key={item.role} className="role-section-row">
+                {item.align === "left" ? (
+                  <>
+                    <div>
+                      <span className="badge" style={{ background: "var(--color-primary-light)", color: "var(--color-primary)", marginBottom: "0.75rem" }}>
+                        {item.label}
+                      </span>
+                      <h3 className="heading-serif" style={{ fontSize: "1.75rem", marginBottom: "0.75rem", color: "var(--color-secondary)" }}>
+                        {item.title}
+                      </h3>
+                      <p className="text-muted">{item.description}</p>
+                    </div>
+                    <RoleAnimatedIcon role={item.role} />
+                  </>
+                ) : (
+                  <>
+                    <RoleAnimatedIcon role={item.role} />
+                    <div>
+                      <span className="badge" style={{ background: "var(--color-primary-light)", color: "var(--color-primary)", marginBottom: "0.75rem" }}>
+                        {item.label}
+                      </span>
+                      <h3 className="heading-serif" style={{ fontSize: "1.75rem", marginBottom: "0.75rem", color: "var(--color-secondary)" }}>
+                        {item.title}
+                      </h3>
+                      <p className="text-muted">{item.description}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container">
+          <div className="section__header">
+            <h2 className="section__title heading-serif">Funcionalidades clave</h2>
+            <p className="text-muted text-lg">
+              Todo lo necesario para operar y vender más.
+            </p>
+          </div>
           <div className="grid grid--3">
             {BENEFICIOS.map((b) => (
-              <div key={b.title} className="feature-card">
+              <div key={b.title} className="feature-card hover-reveal-card">
                 <div className="feature-card__icon">{b.icon}</div>
                 <h3 className="feature-card__title">{b.title}</h3>
                 <p className="feature-card__desc">{b.description}</p>
@@ -130,39 +166,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Founder Story Teaser */}
       <section
         className="section"
         style={{
           background: "linear-gradient(135deg, var(--color-secondary) 0%, #2d2d44 100%)",
           color: "white",
+          borderTop: "1px solid rgba(255,255,255,0.1)",
         }}
       >
-        <div className="container" style={{ textAlign: "center" }}>
-          <span className="badge badge--warning" style={{ marginBottom: "1rem" }}>
-            Conoce la Historia
-          </span>
-          <h2 className="section__title heading-serif" style={{ color: "white", fontSize: "2.5rem" }}>
-            Desarrollado por Zaira & Amauri
+        <div className="container" style={{ textAlign: "center", padding: "2rem 0" }}>
+          <span className="badge badge--warning" style={{ marginBottom: "1rem" }}>Origen escolar · ITP</span>
+          <h2 className="section__title heading-serif" style={{ color: "white", fontSize: "2.25rem" }}>
+            Detrás de Servitotal
           </h2>
-          <p
-            style={{
-              opacity: 0.9,
-              maxWidth: 600,
-              margin: "0 auto 2rem",
-              lineHeight: "1.7",
-              fontSize: "1.125rem",
-            }}
-          >
-            Servitotal nació como un proyecto universitario enfocado en crear una plataforma de gestión gastronómica accesible, moderna y ultra rápida.
+          <p style={{ opacity: 0.9, maxWidth: 560, margin: "0 auto 2rem", lineHeight: "1.6", fontSize: "1.0625rem" }}>
+            Proyecto de <strong>Negocios Electrónicos I</strong> en el <strong>ITP</strong>, creado por Zaira y Amauri para digitalizar restaurantes.
           </p>
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-            <Link href="/contacto">
-              <Button variant="primary" size="lg">
-                Conocer la historia y contactarnos
-              </Button>
-            </Link>
-          </div>
+          <Link href="/nosotros">
+            <Button variant="primary" size="lg" style={{ backgroundColor: "#e85d04", borderColor: "#e85d04" }}>
+              Conoce al equipo
+            </Button>
+          </Link>
         </div>
       </section>
     </PublicLayout>
