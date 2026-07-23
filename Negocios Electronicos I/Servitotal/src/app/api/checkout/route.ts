@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       ],
       mode: "subscription",
       success_url: `${origin}/precios/success?session_id={CHECKOUT_SESSION_ID}&planId=${planId}`,
-      cancel_url: `${origin}/precios`,
+      cancel_url: `${origin}/servicios`,
       customer_email: userEmail || undefined,
       metadata: {
         userId,

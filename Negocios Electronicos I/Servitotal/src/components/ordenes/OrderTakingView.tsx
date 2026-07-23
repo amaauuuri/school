@@ -7,16 +7,14 @@ import { useFirestore } from "@/lib/FirestoreContext";
 import { useAuth } from "@/lib/AuthContext";
 import type { GlobalOrder, MenuItem, OrderItem } from "@/lib/types";
 
-interface CustomCategory {
-  name: string;
-  subcategories: string[];
-}
+const DEFAULT_CATEGORIES = ["Alimentos", "Bebidas", "Postres"];
 
-const DEFAULT_CATEGORIES: CustomCategory[] = [
-  { name: "Alimentos", subcategories: ["Entradas", "Platos Fuertes", "Postres"] },
-  { name: "Bebidas", subcategories: ["Calientes", "Frías", "Alcoholes"] },
-  { name: "Postres", subcategories: ["Pasteles", "Helados"] },
-];
+function normalizeCategories(raw: unknown): string[] {
+  if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_CATEGORIES;
+  return raw
+    .map((item) => (typeof item === "string" ? item : (item as { name: string }).name))
+    .filter(Boolean);
+}
 
 export function OrderTakingView() {
   const { activeTableId, setActiveTableId } = useServitotalStore();
@@ -25,7 +23,6 @@ export function OrderTakingView() {
   const { user } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState<string>("");
-  const [activeSubcategory, setActiveSubcategory] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   // The mesaNumero is stored as a string in activeTableId
@@ -54,26 +51,19 @@ export function OrderTakingView() {
     }
   }, [activeOrder]);
 
-  // Load configured categories from restaurant config or defaults
-  const categoriesList: CustomCategory[] =
-    (restaurantConfig as any)?.customCategories || DEFAULT_CATEGORIES;
+  const categoriesList = normalizeCategories(
+    (restaurantConfig as { customCategories?: unknown } | null)?.customCategories
+  );
 
-  // Initialize selected category
   useEffect(() => {
-    if (categoriesList && categoriesList.length > 0 && !activeCategory) {
-      setActiveCategory(categoriesList[0].name);
-      setActiveSubcategory("");
+    if (categoriesList.length > 0 && !activeCategory) {
+      setActiveCategory(categoriesList[0]);
     }
   }, [categoriesList, activeCategory]);
 
-  const selectedCategoryObj = categoriesList.find((c) => c.name === activeCategory);
-
-  // Filter menu items by category and subcategory
-  const filteredMenu = menu.filter((item) => {
-    const matchesCat = item.category === activeCategory;
-    const matchesSub = activeSubcategory === "" || item.subcategory === activeSubcategory;
-    return matchesCat && matchesSub && item.available;
-  });
+  const filteredMenu = menu.filter(
+    (item) => item.category === activeCategory && item.available
+  );
 
   // Keep cart in a ref for the debounce callback to always see the latest value
   const cartRef = useRef(cart);
@@ -244,61 +234,15 @@ export function OrderTakingView() {
         <div className="category-tabs">
           {categoriesList.map((cat) => (
             <button
-              key={cat.name}
+              key={cat}
               type="button"
-              className={`category-tab ${activeCategory === cat.name ? "category-tab--active" : ""}`}
-              onClick={() => {
-                setActiveCategory(cat.name);
-                setActiveSubcategory("");
-              }}
+              className={`category-tab ${activeCategory === cat ? "category-tab--active" : ""}`}
+              onClick={() => setActiveCategory(cat)}
             >
-              {cat.name}
+              {cat}
             </button>
           ))}
         </div>
-
-        {/* Subcategory sub-tabs */}
-        {selectedCategoryObj && selectedCategoryObj.subcategories && selectedCategoryObj.subcategories.length > 0 && (
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap", padding: "0 0.25rem" }}>
-            <button
-              type="button"
-              style={{
-                padding: "0.35rem 0.85rem",
-                borderRadius: "999px",
-                border: "1px solid var(--color-border)",
-                background: activeSubcategory === "" ? "var(--color-secondary)" : "var(--color-surface)",
-                color: activeSubcategory === "" ? "white" : "var(--color-text-muted)",
-                fontSize: "0.8rem",
-                cursor: "pointer",
-                fontWeight: 600,
-                transition: "all 0.15s ease",
-              }}
-              onClick={() => setActiveSubcategory("")}
-            >
-              Todas
-            </button>
-            {selectedCategoryObj.subcategories.map((sub) => (
-              <button
-                key={sub}
-                type="button"
-                style={{
-                  padding: "0.35rem 0.85rem",
-                  borderRadius: "999px",
-                  border: "1px solid var(--color-border)",
-                  background: activeSubcategory === sub ? "var(--color-secondary)" : "var(--color-surface)",
-                  color: activeSubcategory === sub ? "white" : "var(--color-text-muted)",
-                  fontSize: "0.8rem",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  transition: "all 0.15s ease",
-                }}
-                onClick={() => setActiveSubcategory(sub)}
-              >
-                {sub}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Menu item cards */}
         <div className="menu-item-grid">

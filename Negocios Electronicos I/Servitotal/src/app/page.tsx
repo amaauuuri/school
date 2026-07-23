@@ -45,28 +45,24 @@ const ROLES_FLUX = [
     label: "Comensal",
     title: "Servicio rápido y sin esperas",
     description: "La orden llega al instante y el platillo se sirve a tiempo.",
-    align: "left" as const,
   },
   {
     role: "mesero" as const,
     label: "Mesero",
     title: "Comandas con un toque",
     description: "Registra pedidos desde el móvil y envíalos directo a cocina.",
-    align: "right" as const,
   },
   {
     role: "caja" as const,
     label: "Caja",
     title: "Cobros ágiles con IVA incluido",
     description: "Cuentas actualizadas al segundo con el 16% de IVA automático.",
-    align: "left" as const,
   },
   {
     role: "dueno" as const,
     label: "Dueño",
     title: "Visión total del negocio",
     description: "Supervisa ventas, staff y operación desde cualquier lugar.",
-    align: "right" as const,
   },
 ];
 
@@ -110,36 +106,17 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "4rem", marginTop: "2.5rem" }}>
+          <div className="roles-grid">
             {ROLES_FLUX.map((item) => (
-              <div key={item.role} className="role-section-row">
-                {item.align === "left" ? (
-                  <>
-                    <div>
-                      <span className="badge" style={{ background: "var(--color-primary-light)", color: "var(--color-primary)", marginBottom: "0.75rem" }}>
-                        {item.label}
-                      </span>
-                      <h3 className="heading-serif" style={{ fontSize: "1.75rem", marginBottom: "0.75rem", color: "var(--color-secondary)" }}>
-                        {item.title}
-                      </h3>
-                      <p className="text-muted">{item.description}</p>
-                    </div>
-                    <RoleAnimatedIcon role={item.role} />
-                  </>
-                ) : (
-                  <>
-                    <RoleAnimatedIcon role={item.role} />
-                    <div>
-                      <span className="badge" style={{ background: "var(--color-primary-light)", color: "var(--color-primary)", marginBottom: "0.75rem" }}>
-                        {item.label}
-                      </span>
-                      <h3 className="heading-serif" style={{ fontSize: "1.75rem", marginBottom: "0.75rem", color: "var(--color-secondary)" }}>
-                        {item.title}
-                      </h3>
-                      <p className="text-muted">{item.description}</p>
-                    </div>
-                  </>
-                )}
+              <div key={item.role} className="role-card">
+                <div className="role-card__icon">
+                  <RoleAnimatedIcon role={item.role} />
+                </div>
+                <div className="role-card__body">
+                  <span className="badge role-card__badge">{item.label}</span>
+                  <h3 className="role-card__title heading-serif">{item.title}</h3>
+                  <p className="role-card__desc text-muted">{item.description}</p>
+                </div>
               </div>
             ))}
           </div>

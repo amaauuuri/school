@@ -26,11 +26,11 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     }
   }, [user, loading, router]);
 
-  // Redirect to precios if not subscribed
+  // Redirect to servicios if not subscribed
   useEffect(() => {
     if (!loading && user && user.emailVerified && !loadingData) {
       if (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED") {
-        router.push("/precios");
+        router.push("/servicios");
       }
     }
   }, [user, loading, restaurantConfig, loadingData, router]);

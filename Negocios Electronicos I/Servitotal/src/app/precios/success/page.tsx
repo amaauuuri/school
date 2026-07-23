@@ -132,7 +132,7 @@ function SuccessPageContent() {
               {errorMsg}
             </p>
             <button
-              onClick={() => router.push("/precios")}
+              onClick={() => router.push("/servicios")}
               className="btn btn--primary btn--block"
             >
               Volver a Planes

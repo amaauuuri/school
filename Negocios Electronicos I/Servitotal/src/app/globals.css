@@ -1430,7 +1430,128 @@ textarea {
   margin-bottom: 0.75rem;
 }
 
-/* Role sections alternating layout */
+/* Role sections — compact seamless card grid */
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  margin-top: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.25s ease;
+}
+
+.role-card:nth-child(2n) {
+  border-right: none;
+}
+
+.role-card:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.role-card:hover {
+  background: var(--color-primary-light);
+}
+
+.role-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: 1.25rem 1rem 0.5rem;
+  background: linear-gradient(180deg, var(--color-primary-light) 0%, transparent 100%);
+}
+
+.role-card__body {
+  padding: 1rem 1.25rem 1.5rem;
+  flex: 1;
+}
+
+.role-card__badge {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.role-card__title {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-secondary);
+  line-height: 1.3;
+}
+
+.role-card__desc {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.role-icon {
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.role-icon__scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+
+@media (max-width: 768px) {
+  .roles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-card {
+    border-right: none;
+  }
+
+  .role-card:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .role-card:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .role-card:last-child {
+    border-bottom: none;
+  }
+
+  .role-card__icon {
+    min-height: 110px;
+  }
+
+  .role-card__title {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .role-card__icon {
+    min-height: 120px;
+  }
+}
+
+/* Role sections alternating layout (legacy) */
 .role-section-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
