@@ -34,7 +34,7 @@ export function AdminSidebar() {
         <div className="dashboard-sidebar__header">
           <Link href="/admin/menu" className="public-header__logo">
             <span className="public-header__logo-icon">S</span>
-            Servitotal
+            <span className="dashboard-sidebar__logo-text">Servitotal</span>
           </Link>
           <div className="dashboard-sidebar__restaurant">
             Panel Admin · {restaurantName}
@@ -51,7 +51,7 @@ export function AdminSidebar() {
               }`}
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
-              {item.label}
+              <span className="dashboard-sidebar__link-text">{item.label}</span>
             </Link>
           ))}
         </nav>
@@ -59,11 +59,11 @@ export function AdminSidebar() {
         <div className="dashboard-sidebar__footer">
           <Link href="/dashboard/mesas" className="dashboard-sidebar__link">
             <span className="dashboard-sidebar__link-icon">🪑</span>
-            Vista Operativa
+            <span className="dashboard-sidebar__link-text">Vista Operativa</span>
           </Link>
           <a href="#" onClick={handleLogout} className="dashboard-sidebar__link">
             <span className="dashboard-sidebar__link-icon">↩</span>
-            Salir
+            <span className="dashboard-sidebar__link-text">Salir</span>
           </a>
         </div>
       </aside>

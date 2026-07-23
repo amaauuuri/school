@@ -288,3 +288,25 @@ export function subscribeTodaySales(
     callback(sales);
   });
 }
+
+/**
+ * Batches the import of multiple menu items.
+ * Divides them in chunks of 500 (Firestore batch limit) and executes them.
+ */
+export async function importMenuItemsBatch(
+  restaurantId: string,
+  items: Omit<MenuItem, "id">[]
+): Promise<void> {
+  const chunkSize = 500;
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    chunk.forEach((item) => {
+      const id = generateId();
+      const ref = doc(db, "restaurants", restaurantId, "menu", id);
+      batch.set(ref, item);
+    });
+    await batch.commit();
+  }
+}
+

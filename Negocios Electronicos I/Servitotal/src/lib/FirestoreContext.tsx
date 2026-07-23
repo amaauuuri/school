@@ -23,6 +23,7 @@ import {
   updateOrderItems as fsUpdateOrderItems,
   updateOrderStatus as fsUpdateOrderStatus,
   closeOrderAndRecord as fsCloseOrderAndRecord,
+  importMenuItemsBatch as fsImportMenuItemsBatch,
 } from "./firestoreService";
 import type {
   GlobalOrder,
@@ -51,6 +52,7 @@ interface FirestoreContextType {
   addMenuItem: (item: Omit<MenuItem, "id">) => Promise<void>;
   updateMenuItem: (id: string, updates: Partial<Omit<MenuItem, "id">>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
+  importMenuItemsBatch: (items: Omit<MenuItem, "id">[]) => Promise<void>;
 
   // Config actions
   updateRestaurantConfig: (data: Partial<RestaurantConfig>) => Promise<void>;
@@ -153,6 +155,14 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
     [restaurantId]
   );
 
+  const importMenuItemsBatch = useCallback(
+    async (items: Omit<MenuItem, "id">[]) => {
+      if (!restaurantId) return;
+      await fsImportMenuItemsBatch(restaurantId, items);
+    },
+    [restaurantId]
+  );
+
   const updateRestaurantConfig = useCallback(
     async (data: Partial<RestaurantConfig>) => {
       if (!restaurantId) return;
@@ -202,6 +212,7 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,
+      importMenuItemsBatch,
       updateRestaurantConfig,
       createOrder,
       updateOrderItems,
@@ -218,6 +229,7 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,
+      importMenuItemsBatch,
       updateRestaurantConfig,
       createOrder,
       updateOrderItems,

@@ -34,7 +34,7 @@ export function DashboardSidebar() {
         <div className="dashboard-sidebar__header">
           <Link href="/dashboard/mesas" className="public-header__logo">
             <span className="public-header__logo-icon">S</span>
-            Servitotal
+            <span className="dashboard-sidebar__logo-text">Servitotal</span>
           </Link>
           <div className="dashboard-sidebar__restaurant">{restaurantName}</div>
         </div>
@@ -49,7 +49,7 @@ export function DashboardSidebar() {
               }`}
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
-              {item.label}
+              <span className="dashboard-sidebar__link-text">{item.label}</span>
             </Link>
           ))}
         </nav>
@@ -58,12 +58,12 @@ export function DashboardSidebar() {
           {profile?.role === "ADMIN" && (
             <Link href="/admin/menu" className="dashboard-sidebar__link">
               <span className="dashboard-sidebar__link-icon">⚙️</span>
-              Panel Admin
+              <span className="dashboard-sidebar__link-text">Panel Admin</span>
             </Link>
           )}
           <a href="#" onClick={handleLogout} className="dashboard-sidebar__link">
             <span className="dashboard-sidebar__link-icon">↩</span>
-            Salir
+            <span className="dashboard-sidebar__link-text">Salir</span>
           </a>
         </div>
       </aside>
