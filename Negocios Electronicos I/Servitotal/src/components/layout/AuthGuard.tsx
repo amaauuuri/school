@@ -29,7 +29,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   // Redirect to precios if not subscribed
   useEffect(() => {
     if (!loading && user && user.emailVerified && !loadingData) {
-      if (!restaurantConfig || restaurantConfig.status !== "SUBSCRIBED") {
+      if (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED") {
         router.push("/precios");
       }
     }
@@ -63,21 +63,23 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   }
 
   // Redirect if not subscribed
-  if (user.emailVerified && (!restaurantConfig || restaurantConfig.status !== "SUBSCRIBED")) {
+  if (user.emailVerified && (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED")) {
     return null; // Will redirect in useEffect
   }
 
   // Force Email Verification
   if (!user.emailVerified) {
+    const authCurrentUserVerified = () => {
+      return user.emailVerified;
+    };
+
     const handleCheckVerification = async () => {
       setChecking(true);
       setMessage(null);
       try {
         await reloadUser();
-        // Wait, if it's verified now:
         if (authCurrentUserVerified()) {
           setMessage({ text: "¡Cuenta verificada! Ingresando...", type: "success" });
-          // Force state update
           window.location.reload();
         } else {
           setMessage({
@@ -92,17 +94,12 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
       }
     };
 
-    const authCurrentUserVerified = () => {
-      // Reloaded state check
-      return user.emailVerified;
-    };
-
     const handleResend = async () => {
       setMessage(null);
       try {
         await resendVerificationEmail();
         setMessage({ text: "Se ha reenviado el enlace de verificación.", type: "success" });
-        setCooldown(60); // 1 minute cooldown
+        setCooldown(60);
       } catch (err: any) {
         setMessage({ text: err.message || "No se pudo enviar el correo.", type: "error" });
       }
@@ -149,7 +146,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     );
   }
 
-  // Block staff from admin layouts (useEffect handles redirection, this prevents rendering the content in the meantime)
+  // Block staff from admin layouts
   if (requireAdmin && profile && profile.role !== "ADMIN") {
     return null;
   }

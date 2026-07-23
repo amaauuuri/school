@@ -250,8 +250,8 @@ export function ReportsView() {
       </div>
 
       {loading ? (
-        <div style={{ padding: "3rem", textMuted: true, textAlign: "center" }}>Cargando métricas...</div>
-      ) : (
+
+<div className="text-muted" style={{ padding: "3rem", textAlign: "center" }}>Cargando métricas...</div>      ) : (
         <>
           {/* ── KPI cards ──────────────────────────────────────────────────────── */}
           <div className="grid grid--3" style={{ marginBottom: "1.5rem" }}>

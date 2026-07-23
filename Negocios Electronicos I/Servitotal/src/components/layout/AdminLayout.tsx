@@ -33,11 +33,8 @@ export function AdminSidebar() {
         <div className="dashboard-sidebar__header">
           <Link href="/admin/menu" className="public-header__logo dashboard-sidebar__brand">
             <span className="public-header__logo-icon">S</span>
-<<<<<<< HEAD
             <span className="dashboard-sidebar__logo-text">Servitotal</span>
-=======
             <span className="dashboard-sidebar__label">Servitotal</span>
->>>>>>> 17990bd (Penultima revision)
           </Link>
           <div className="dashboard-sidebar__restaurant dashboard-sidebar__label">
             Admin · {restaurantName}
@@ -55,11 +52,7 @@ export function AdminSidebar() {
               title={item.label}
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
-<<<<<<< HEAD
-              <span className="dashboard-sidebar__link-text">{item.label}</span>
-=======
-              <span className="dashboard-sidebar__label">{item.label}</span>
->>>>>>> 17990bd (Penultima revision)
+                <span className="dashboard-sidebar__link-text">{item.label}</span>
             </Link>
           ))}
         </nav>
@@ -67,19 +60,13 @@ export function AdminSidebar() {
         <div className="dashboard-sidebar__footer">
           <Link href="/dashboard/mesas" className="dashboard-sidebar__link" title="Vista Operativa">
             <span className="dashboard-sidebar__link-icon">🪑</span>
-<<<<<<< HEAD
             <span className="dashboard-sidebar__link-text">Vista Operativa</span>
-=======
             <span className="dashboard-sidebar__label">Vista Operativa</span>
->>>>>>> 17990bd (Penultima revision)
           </Link>
           <a href="#" onClick={handleLogout} className="dashboard-sidebar__link" title="Salir">
             <span className="dashboard-sidebar__link-icon">↩</span>
-<<<<<<< HEAD
             <span className="dashboard-sidebar__link-text">Salir</span>
-=======
             <span className="dashboard-sidebar__label">Salir</span>
->>>>>>> 17990bd (Penultima revision)
           </a>
         </div>
       </aside>

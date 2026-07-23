@@ -22,16 +22,10 @@ const EMPTY_FORM = {
   available: true,
 };
 
-<<<<<<< HEAD
-// Robust CSV Parsing helper
+// Helper de parseo CSV
 function parseCSV(text: string): any[] {
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
   if (lines.length === 0) return [];
-=======
-export function MenuManagementView() {
-  const { menu, addMenuItem, updateMenuItem, deleteMenuItem, restaurantConfig, updateRestaurantConfig, loadingData } =
-    useFirestore();
->>>>>>> 17990bd (Penultima revision)
 
   const splitCSVRow = (rowText: string) => {
     const result = [];
@@ -76,6 +70,8 @@ export function MenuManagementView() {
     updateMenuItem,
     deleteMenuItem,
     importMenuItemsBatch,
+    restaurantConfig,
+    updateRestaurantConfig,
     loadingData,
   } = useFirestore();
 
@@ -87,7 +83,6 @@ export function MenuManagementView() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-<<<<<<< HEAD
   // Import states
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -96,7 +91,6 @@ export function MenuManagementView() {
   >([]);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-=======
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [localCategories, setLocalCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [newCatName, setNewCatName] = useState("");
@@ -108,7 +102,6 @@ export function MenuManagementView() {
   useEffect(() => {
     setLocalCategories(categoriesList);
   }, [restaurantConfig]);
->>>>>>> 17990bd (Penultima revision)
 
   function openCreate() {
     setEditingId(null);
@@ -172,7 +165,6 @@ export function MenuManagementView() {
     await updateMenuItem(item.id, { available: !item.available });
   }
 
-<<<<<<< HEAD
   // AI Import handling
   const handleFileParse = async (file: File) => {
     setImportError(null);
@@ -187,7 +179,6 @@ export function MenuManagementView() {
       } else if (file.name.endsWith(".csv")) {
         rawItems = parseCSV(text);
       } else {
-        // Fallback detection
         try {
           const parsed = JSON.parse(text);
           rawItems = Array.isArray(parsed) ? parsed : parsed.items || parsed.menu || [];
@@ -200,38 +191,15 @@ export function MenuManagementView() {
         throw new Error("No se encontraron platillos en el archivo o el formato es inválido.");
       }
 
-      // Map and validate items
       const validated: Array<Omit<MenuItem, "id"> & { error?: string }> = rawItems.map(
         (raw) => {
-          const name = String(
-            raw.name || raw.nombre || raw.title || raw.titulo || ""
-          ).trim();
-          const description = String(
-            raw.description || raw.descripcion || raw.desc || ""
-          ).trim();
+          const name = String(raw.name || raw.nombre || raw.title || raw.titulo || "").trim();
+          const description = String(raw.description || raw.descripcion || raw.desc || "").trim();
 
           let price = parseFloat(raw.price || raw.precio || "0");
           if (isNaN(price)) price = 0;
 
-          // Map categories intelligently
-          let category: MenuCategory = "alimentos";
-          const rawCategory = String(raw.category || raw.categoria || "")
-            .trim()
-            .toLowerCase();
-          if (
-            rawCategory.startsWith("beb") ||
-            rawCategory.startsWith("drink") ||
-            rawCategory.startsWith("coct") ||
-            rawCategory.startsWith("refres")
-          ) {
-            category = "bebidas";
-          } else if (
-            rawCategory.startsWith("post") ||
-            rawCategory.startsWith("dess") ||
-            rawCategory.startsWith("dulce")
-          ) {
-            category = "postres";
-          }
+          let category = String(raw.category || raw.categoria || "Alimentos").trim();
 
           let available = true;
           if (raw.available !== undefined) {
@@ -241,22 +209,11 @@ export function MenuManagementView() {
               raw.available === 1 ||
               String(raw.available) === "si" ||
               String(raw.available).toLowerCase() === "sí";
-          } else if (raw.disponible !== undefined) {
-            available =
-              raw.disponible === true ||
-              String(raw.disponible).toLowerCase() === "true" ||
-              raw.disponible === 1 ||
-              String(raw.disponible) === "si" ||
-              String(raw.disponible).toLowerCase() === "sí";
           }
 
           const errors: string[] = [];
-          if (!name) {
-            errors.push("Falta nombre");
-          }
-          if (price <= 0) {
-            errors.push("Precio inválido o <= 0");
-          }
+          if (!name) errors.push("Falta nombre");
+          if (price <= 0) errors.push("Precio inválido o <= 0");
 
           return {
             name,
@@ -280,7 +237,6 @@ export function MenuManagementView() {
     setImporting(true);
     setImportError(null);
     try {
-      // Remove validation wrapper attributes
       const cleanItems = parsedItems.map(({ error, ...item }) => item);
       await importMenuItemsBatch(cleanItems);
       closeImportModal();
@@ -298,7 +254,6 @@ export function MenuManagementView() {
     setIsDragging(false);
   }
 
-=======
   function handleAddCategory() {
     const trimmed = newCatName.trim();
     if (!trimmed) return;
@@ -343,7 +298,6 @@ export function MenuManagementView() {
     }
   }
 
->>>>>>> 17990bd (Penultima revision)
   if (loadingData) {
     return (
       <div style={{ padding: "2rem", color: "var(--color-text-muted)", textAlign: "center" }}>
@@ -355,21 +309,11 @@ export function MenuManagementView() {
   return (
     <>
       <div className="page-header">
-<<<<<<< HEAD
         <p className="text-muted">{menu.length} platillos en el menú</p>
         <div className="page-header__actions" style={{ display: "flex", gap: "0.5rem" }}>
-          <Button variant="outline" onClick={() => setImportModalOpen(true)}>
-            🤖 Importar Menú (IA)
-          </Button>
-          <Button variant="primary" onClick={openCreate}>
-            + Agregar platillo
-          </Button>
-=======
-        <p className="text-muted">{menu.length} platillos</p>
-        <div className="page-header__actions" style={{ display: "flex", gap: "0.5rem" }}>
           <Button variant="outline" onClick={() => setCatModalOpen(true)}>📁 Categorías</Button>
+          <Button variant="outline" onClick={() => setImportModalOpen(true)}>🤖 Importar Menú (IA)</Button>
           <Button variant="primary" onClick={openCreate}>+ Agregar platillo</Button>
->>>>>>> 17990bd (Penultima revision)
         </div>
       </div>
 
@@ -533,7 +477,6 @@ export function MenuManagementView() {
         <p>¿Eliminar <strong>{deletingItem?.name}</strong>? Esta acción no se puede deshacer.</p>
       </Modal>
 
-      {/* ── AI Import Modal ─────────────────────────────────────────────────── */}
       <Modal
         open={importModalOpen}
         onClose={closeImportModal}
@@ -632,7 +575,7 @@ export function MenuManagementView() {
                           </strong>
                           <div className="text-sm text-muted">{item.description}</div>
                         </td>
-                        <td>{CATEGORY_LABELS[item.category]}</td>
+                        <td>{item.category}</td>
                         <td>{formatCurrency(item.price)}</td>
                         <td>
                           {item.error ? (
@@ -660,4 +603,3 @@ export function MenuManagementView() {
     </>
   );
 }
-

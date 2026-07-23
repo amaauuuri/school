@@ -34,11 +34,8 @@ export function DashboardSidebar() {
         <div className="dashboard-sidebar__header">
           <Link href="/dashboard/mesas" className="public-header__logo dashboard-sidebar__brand">
             <span className="public-header__logo-icon">S</span>
-<<<<<<< HEAD
             <span className="dashboard-sidebar__logo-text">Servitotal</span>
-=======
             <span className="dashboard-sidebar__label">Servitotal</span>
->>>>>>> 17990bd (Penultima revision)
           </Link>
           <div className="dashboard-sidebar__restaurant dashboard-sidebar__label">{restaurantName}</div>
         </div>
@@ -54,11 +51,8 @@ export function DashboardSidebar() {
               title={item.label}
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
-<<<<<<< HEAD
               <span className="dashboard-sidebar__link-text">{item.label}</span>
-=======
               <span className="dashboard-sidebar__label">{item.label}</span>
->>>>>>> 17990bd (Penultima revision)
             </Link>
           ))}
         </nav>
@@ -67,20 +61,14 @@ export function DashboardSidebar() {
           {profile?.role === "ADMIN" && (
             <Link href="/admin/menu" className="dashboard-sidebar__link" title="Panel Admin">
               <span className="dashboard-sidebar__link-icon">⚙️</span>
-<<<<<<< HEAD
               <span className="dashboard-sidebar__link-text">Panel Admin</span>
-=======
               <span className="dashboard-sidebar__label">Panel Admin</span>
->>>>>>> 17990bd (Penultima revision)
             </Link>
           )}
           <a href="#" onClick={handleLogout} className="dashboard-sidebar__link" title="Salir">
             <span className="dashboard-sidebar__link-icon">↩</span>
-<<<<<<< HEAD
             <span className="dashboard-sidebar__link-text">Salir</span>
-=======
             <span className="dashboard-sidebar__label">Salir</span>
->>>>>>> 17990bd (Penultima revision)
           </a>
         </div>
       </aside>
