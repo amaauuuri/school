@@ -310,7 +310,8 @@ export function ReportsView() {
                   Sin ventas registradas en este periodo.
                 </div>
               ) : (
-                <table className="data-table">
+                <div className="reports-scroll-wrapper card-table-wrapper">
+                  <table className="data-table">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -330,6 +331,7 @@ export function ReportsView() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>

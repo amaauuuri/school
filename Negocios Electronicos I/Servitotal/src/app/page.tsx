@@ -154,12 +154,17 @@ export default function HomePage() {
               Todo lo necesario para operar y vender más.
             </p>
           </div>
-          <div className="grid grid--3">
-            {BENEFICIOS.map((b) => (
-              <div key={b.title} className="feature-card hover-reveal-card">
-                <div className="feature-card__icon">{b.icon}</div>
-                <h3 className="feature-card__title">{b.title}</h3>
-                <p className="feature-card__desc">{b.description}</p>
+          <div className="benefits-alternating">
+            {BENEFICIOS.map((b, i) => (
+              <div
+                key={b.title}
+                className={`benefits-alternating__row benefits-alternating__row--${i % 2 === 0 ? "left" : "right"}`}
+              >
+                <div className="feature-card hover-reveal-card">
+                  <div className="feature-card__icon">{b.icon}</div>
+                  <h3 className="feature-card__title">{b.title}</h3>
+                  <p className="feature-card__desc">{b.description}</p>
+                </div>
               </div>
             ))}
           </div>

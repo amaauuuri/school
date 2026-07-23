@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/AuthContext";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const SERVICIOS_DETALLADOS = [
   { icon: "🗺️", title: "Mesas en tiempo real", desc: "Visualiza mesas disponibles, ocupadas o listas para cobrar al instante." },
@@ -126,14 +127,16 @@ export default function ServiciosPage() {
       <section className="section" style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}>
         <div className="container">
           <div className="service-list">
-            {SERVICIOS_DETALLADOS.map((serv) => (
-              <div key={serv.title} className="service-row-card hover-reveal-card">
-                <div className="service-row-card__icon">{serv.icon}</div>
-                <div className="service-row-card__body">
-                  <h3 className="service-row-card__title">{serv.title}</h3>
-                  <p className="service-row-card__desc">{serv.desc}</p>
+            {SERVICIOS_DETALLADOS.map((serv, i) => (
+              <ScrollReveal key={serv.title} delay={i * 80}>
+                <div className="service-row-card hover-reveal-card">
+                  <div className="service-row-card__icon">{serv.icon}</div>
+                  <div className="service-row-card__body">
+                    <h3 className="service-row-card__title">{serv.title}</h3>
+                    <p className="service-row-card__desc">{serv.desc}</p>
+                  </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>

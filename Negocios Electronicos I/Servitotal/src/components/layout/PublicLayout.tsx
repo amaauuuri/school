@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/AuthContext";
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
   { href: "/servicios", label: "Servicios" },
+  { href: "/precios", label: "Precios" },
   { href: "/nosotros", label: "Sobre Nosotros" },
   { href: "/contacto", label: "Contacto" },
 ];
@@ -64,15 +65,8 @@ export function PublicHeader() {
             type="button"
             className="mobile-burger-btn"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Abrir menú"
-            style={{
-              background: "transparent",
-              border: "none",
-              fontSize: "1.75rem",
-              color: "var(--color-secondary)",
-              cursor: "pointer",
-              marginLeft: "0.5rem"
-            }}
+            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? "✕" : "☰"}
           </button>

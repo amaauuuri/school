@@ -52,7 +52,7 @@ export function AdminSidebar() {
               title={item.label}
             >
               <span className="dashboard-sidebar__link-icon">{item.icon}</span>
-                <span className="dashboard-sidebar__link-text">{item.label}</span>
+              <span className="dashboard-sidebar__link-text">{item.label}</span>
             </Link>
           ))}
         </nav>
@@ -84,6 +84,15 @@ export function AdminSidebar() {
           <span>🪑</span>
           Operativa
         </Link>
+        <button
+          type="button"
+          className="mobile-nav-item mobile-nav-item--logout"
+          onClick={handleLogout}
+          title="Salir"
+        >
+          <span>↩</span>
+          Salir
+        </button>
       </nav>
     </>
   );

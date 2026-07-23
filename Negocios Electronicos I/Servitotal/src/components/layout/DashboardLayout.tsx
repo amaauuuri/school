@@ -94,6 +94,15 @@ export function DashboardSidebar() {
             Admin
           </Link>
         )}
+        <button
+          type="button"
+          className="mobile-nav-item mobile-nav-item--logout"
+          onClick={handleLogout}
+          title="Salir"
+        >
+          <span>↩</span>
+          Salir
+        </button>
       </nav>
     </>
   );
