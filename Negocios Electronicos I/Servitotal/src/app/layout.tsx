@@ -5,11 +5,10 @@ import { AuthProvider } from "@/lib/AuthContext";
 import { FirestoreProvider } from "@/lib/FirestoreContext";
 import "./globals.css";
 
-// En src/app/layout.tsx
 const inter = Inter({
   subsets: ["latin"],
-  display: "swap", // 🟢 Renderiza el texto inmediatamente con fuente del sistema
-  preload: true,   // 🟢 Pre-carga el archivo woff2 prioritariamente
+  display: "swap",       // 🟢 Muestra el texto instantáneamente mientras carga la fuente
+  preload: true,
   variable: "--font-inter",
 });
 
@@ -26,11 +25,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      {/* 🟢 Agregamos <head> explícito para la preconexión de imágenes */}
       <head>
+        {/* 🟢 Preconexión indispensable sugerida por Google PageSpeed */}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        <link rel="preconnect" href="https://picsum.photos" crossOrigin="anonymous" />
       </head>
       <body className={inter.className}>
         <AuthProvider>
