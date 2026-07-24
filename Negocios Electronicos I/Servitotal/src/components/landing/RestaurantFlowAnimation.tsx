@@ -262,20 +262,20 @@ export function RestaurantFlowAnimation() {
       <div style={{ display: "flex", gap: "0.5rem" }}>
         {[1, 2, 3, 4].map((id) => (
           <button
-            key={id}
-            type="button"
-            onClick={() => setActiveStep(id)}
-            style={{
-              width: "10px",
-              height: "10px",
-              borderRadius: "50%",
-              border: "none",
-              background: activeStep === id ? FLOW_STEPS[id - 1].color : "var(--color-border)",
-              cursor: "pointer",
-              transition: "background 0.3s ease"
-            }}
-            aria-label={`Paso ${id}`}
-          />
+  type="button"
+  aria-label="Paso 1"
+  style={{
+    width: "12px",
+    height: "12px",
+    borderRadius: "50%",
+    padding: "18px", // 🟢 Agranda el área táctil total a ~48px sin deformar el botón
+    margin: "0 4px",
+    boxSizing: "content-box",
+    backgroundClip: "content-box", // 🟢 Mantiene el color solo en los 12px del centro
+    border: "none",
+    cursor: "pointer",
+  }}
+/>
         ))}
       </div>
     </div>
