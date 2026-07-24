@@ -16,9 +16,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 🟢 CORRECCIÓN: No forzar /admin/menu inmediatamente sin validar suscripción y correo.
   useEffect(() => {
     if (user && profile) {
       if (profile.role === "ADMIN") {
+        // Redirigimos al flujo controlado: AuthGuard en /admin se encargará de enviarlo
+        // a verificar correo si falta, o a /servicio si no ha pagado en Stripe.
         router.push("/admin/menu");
       } else {
         router.push("/dashboard/mesas");

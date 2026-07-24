@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/AuthContext";
@@ -18,7 +19,7 @@ const SERVICIOS_DETALLADOS = [
 
 const DETAILED_PLANS = [
   {
-    id: "starter",
+    id: "starter_monthly",
     name: "Starter",
     price: 499,
     period: "mes",
@@ -35,7 +36,7 @@ const DETAILED_PLANS = [
     highlighted: false,
   },
   {
-    id: "pro",
+    id: "pro_monthly",
     name: "Pro",
     price: 899,
     period: "mes",
@@ -52,7 +53,7 @@ const DETAILED_PLANS = [
     highlighted: true,
   },
   {
-    id: "enterprise",
+    id: "enterprise_monthly",
     name: "Enterprise",
     price: 1499,
     period: "mes",
@@ -79,14 +80,23 @@ const WORKFLOW_STEPS = [
 
 export default function ServiciosPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   async function handleSelectPlan(planId: string) {
+    // 🟢 REGLA 1: Si no ha iniciado sesión, mandar a registrarse preservando el plan elegido
     if (!user) {
-      window.location.href = `/registro?plan=${planId}`;
+      router.push(`/registro?plan=${planId}`);
       return;
     }
 
+    // 🟢 REGLA 2: Si el usuario existe pero no ha verificado su correo, llevarlo al AuthGuard/Verificación
+    if (!user.emailVerified) {
+      router.push("/admin/menu");
+      return;
+    }
+
+    // 🟢 REGLA 3: Si tiene sesión activa y correo verificado, directo al Sandbox de Stripe
     setLoadingPlan(planId);
     try {
       const res = await fetch("/api/checkout", {
@@ -96,14 +106,14 @@ export default function ServiciosPage() {
       });
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url;
+        window.location.href = data.url; // Redirección externa obligatoria a la pasarela de Stripe
       } else {
-        alert(data.error || "Error al iniciar el pago.");
+        alert(data.error || "Error al iniciar el proceso de pago.");
         setLoadingPlan(null);
       }
     } catch (err) {
       console.error(err);
-      alert("Error de conexión.");
+      alert("Error de conexión al intentar pagar.");
       setLoadingPlan(null);
     }
   }

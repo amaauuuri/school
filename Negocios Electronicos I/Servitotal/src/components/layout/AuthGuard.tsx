@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useFirestore } from "@/lib/FirestoreContext";
@@ -15,46 +15,57 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   const { user, profile, loading, reloadUser, resendVerificationEmail, logout } = useAuth();
   const { restaurantConfig, loadingData } = useFirestore();
   const router = useRouter();
+  const pathname = usePathname();
+
   const [checking, setChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  // 1. Redirigir si no está autenticado
+  // 1. Redirigir al login si no hay sesión activa
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
-  // 2. 🛡️ VERIFICACIÓN DE ACCESO REVOCADO (STATUS INACTIVE)
+  // 2. Verificación de acceso revocado
   useEffect(() => {
     if (!loading && user && profile) {
       const isInactive = (profile as any)?.status === "INACTIVE";
       const hasNoRestaurant = profile.role === "STAFF" && !profile.restaurantName;
 
       if (isInactive || hasNoRestaurant) {
-        logout(); // Cierra sesión automáticamente
+        logout();
         router.push("/login?error=revoked");
       }
     }
   }, [user, profile, loading, logout, router]);
 
-  // Temporizador para el cooldown de reenvío de correo
+  // 🟢 3. INTERCEPTOR ESTRICTO DE FLUJO: Correo Verificado -> /servicio (Pagar) -> Admin/Dashboard
   useEffect(() => {
-    if (cooldown > 0) {
-      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [cooldown]);
+    if (!loading && user && !loadingData && profile) {
+      if ((profile as any)?.status === "INACTIVE") return;
 
-  // 3. Redirigir si un STAFF intenta entrar a rutas ADMIN
+      // PASO 2 Y 3: Si el correo YA fue verificado, pero NO ha pagado en Stripe Sandbox
+      if (user.emailVerified && profile.role === "ADMIN") {
+        const isSubscribed = (restaurantConfig as any)?.status === "SUBSCRIBED";
+
+        if (!isSubscribed && pathname !== "/servicio") {
+          // Bloquea el acceso al dashboard y lo manda directamente a elegir su plan en /servicio
+          router.push("/servicio");
+        }
+      }
+    }
+  }, [user, profile, loading, restaurantConfig, loadingData, pathname, router]);
+
+  // 4. Bloquear a usuarios STAFF en rutas ADMIN
   useEffect(() => {
     if (!loading && user && requireAdmin && profile && profile.role !== "ADMIN") {
       router.push("/dashboard/mesas");
     }
   }, [user, profile, loading, requireAdmin, router]);
 
-  // Renderizado de carga
+  // Pantalla de carga universal mientras se resuelve la sesión de Firebase
   if (loading || (user && user.emailVerified && loadingData)) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
@@ -63,32 +74,24 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
+  if ((profile as any)?.status === "INACTIVE") return null;
 
-  // Si el perfil está inactivo, bloqueamos el renderizado mientras efectúa el logout
-  if ((profile as any)?.status === "INACTIVE") {
-    return null;
-  }
-
-  // Vista de verificación de correo forzada
+  // 🔴 PASO 2 DEL PLAN: Si el correo NO ha sido verificado, MOSTRAR OBLIGATORIAMENTE la pantalla de verificación.
   if (!user.emailVerified) {
-    const authCurrentUserVerified = () => {
-      return user.emailVerified;
-    };
-
     const handleCheckVerification = async () => {
       setChecking(true);
       setMessage(null);
       try {
         await reloadUser();
-        if (authCurrentUserVerified()) {
-          setMessage({ text: "¡Cuenta verificada! Ingresando...", type: "success" });
-          window.location.reload();
+        if (user.emailVerified) {
+          setMessage({ text: "¡Correo verificado con éxito! Redirigiendo a selección de plan...", type: "success" });
+          setTimeout(() => {
+            router.push("/servicio");
+          }, 1000);
         } else {
           setMessage({
-            text: "El correo aún no ha sido verificado. Por favor, revisa tu bandeja de entrada.",
+            text: "El correo aún no ha sido verificado. Por favor revisa tu bandeja o correo no deseado.",
             type: "error",
           });
         }
@@ -114,9 +117,9 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
       <div className="auth-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
         <div className="auth-card" style={{ maxWidth: "480px", width: "100%" }}>
           <div style={{ fontSize: "3rem", textAlign: "center", marginBottom: "1rem" }}>✉️</div>
-          <h1 className="auth-card__title" style={{ textAlign: "center" }}>Verificación de cuenta</h1>
+          <h1 className="auth-card__title" style={{ textAlign: "center" }}>Verificación de correo requerida</h1>
           <p className="auth-card__subtitle" style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-            Hemos enviado un correo de verificación a <strong>{user.email}</strong>. Por favor, verifícalo para ingresar al sistema.
+            Hemos enviado un correo a <strong>{user.email}</strong>. Por favor verifícalo para continuar con la elección de tu plan.
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -125,7 +128,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
             </Button>
 
             <Button onClick={handleResend} variant="outline" block disabled={cooldown > 0}>
-              {cooldown > 0 ? `Reenviar en ${cooldown}s` : "Reenviar correo de verificación"}
+              {cooldown > 0 ? `Reenviar en ${cooldown}s` : "Reenviar correo"}
             </Button>
 
             <Button onClick={logout} variant="ghost" block>
@@ -134,15 +137,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
           </div>
 
           {message && (
-            <p
-              style={{
-                marginTop: "1.25rem",
-                color: message.type === "success" ? "var(--color-success)" : "var(--color-danger)",
-                fontSize: "0.875rem",
-                textAlign: "center",
-                fontWeight: 500,
-              }}
-            >
+            <p style={{ marginTop: "1.25rem", color: message.type === "success" ? "var(--color-success)" : "var(--color-danger)", fontSize: "0.875rem", textAlign: "center", fontWeight: 500 }}>
               {message.text}
             </p>
           )}
@@ -151,8 +146,9 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     );
   }
 
-  // Bloquear a usuarios STAFF en rutas de administrador
-  if (requireAdmin && profile && profile.role !== "ADMIN") {
+  // 🔴 PASO 3 Y 4 DEL PLAN: Si el usuario ya verificó su correo pero NO está suscrito, bloquear cualquier pantalla de admin y mandarlo a /servicio
+  const isSubscribed = (restaurantConfig as any)?.status === "SUBSCRIBED";
+  if (profile?.role === "ADMIN" && !isSubscribed && pathname !== "/servicio") {
     return null;
   }
 

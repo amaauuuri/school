@@ -13,7 +13,7 @@ function RegistroPageContent() {
   const planParam = searchParams.get("plan");
 
   const { user, profile, signUpAdmin, signInWithGoogle } = useAuth();
-  
+
   const [name, setName] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,39 +24,42 @@ function RegistroPageContent() {
   const [checkoutTriggered, setCheckoutTriggered] = useState(false);
 
   useEffect(() => {
-    // 🟢 En cuanto detecta usuario recién creado, dispara Stripe Checkout Sandbox sin trabas
-    if (user && profile && !checkoutTriggered) {
+    // 🟢 Solo procedemos si hay usuario, perfil Y EL CORREO YA FUE VERIFICADO
+    if (user && profile && user.emailVerified && !checkoutTriggered) {
       setCheckoutTriggered(true);
-      setLoading(true);
 
-      const targetPlan = planParam || "pro_monthly";
-
-      fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          planId: targetPlan,
-          userId: user.uid,
-          userEmail: user.email,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.url) {
-            // Redirige directamente al entorno de pago de Stripe
-            window.location.href = data.url;
-          } else {
-            setError(data.error || "Error al iniciar Stripe Checkout.");
-            setLoading(false);
-          }
+      // Si traía un plan en la URL (?plan=...), lo mandamos directo al Checkout
+      if (planParam) {
+        setLoading(true);
+        fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planId: planParam,
+            userId: user.uid,
+            userEmail: user.email,
+          }),
         })
-        .catch((err) => {
-          console.error(err);
-          setError("Error de red al conectar con Stripe.");
-          setLoading(false);
-        });
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.url) {
+              window.location.href = data.url;
+            } else {
+              setError(data.error || "Error al iniciar Stripe Checkout.");
+              setLoading(false);
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            setError("Error de red al conectar con Stripe.");
+            setLoading(false);
+          });
+      } else {
+        // 🟢 Paso 3 del flujo: Si ya está verificado y no tiene plan, lo mandamos a /servicio
+        router.push("/servicio");
+      }
     }
-  }, [user, profile, planParam, checkoutTriggered]);
+  }, [user, profile, planParam, checkoutTriggered, router]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -65,6 +68,8 @@ function RegistroPageContent() {
 
     try {
       await signUpAdmin(name, restaurantName, email, password, phone);
+      // Tras registrarse, no hacemos router.push aquí.
+      // AuthGuard interceptará la pantalla solicitando la verificación de correo.
     } catch (err: any) {
       setError(err.message || "Algo salió mal. Por favor, inténtalo de nuevo.");
       setLoading(false);
@@ -193,7 +198,7 @@ function RegistroPageContent() {
             </div>
 
             <Button type="submit" variant="primary" block disabled={loading}>
-              {loading ? "Conectando con Stripe..." : "Crear cuenta y pagar con Stripe"}
+              {loading ? "Procesando registro..." : "Crear cuenta"}
             </Button>
           </div>
         </form>
