@@ -57,9 +57,13 @@ function RegistroPageContent() {
       } else {
         // 🟢 Paso 3 del flujo: Si ya está verificado y no tiene plan, lo mandamos a /servicio
         router.push("/servicio");
+        
       }
+      
     }
-  }, [user, profile, planParam, checkoutTriggered, router]);
+    
+  }
+  , [user, profile, planParam, checkoutTriggered, router]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
