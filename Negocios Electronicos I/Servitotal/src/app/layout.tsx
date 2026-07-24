@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     "SaaS de gestión y punto de venta para restaurantes. Mesas, órdenes, caja y reportes en un solo lugar.",
 };
 
+// En src/app/layout.tsx
 export default function RootLayout({
   children,
 }: {
@@ -25,6 +26,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <head>
+        {/* 🟢 Preconexiones prioritarias que resuelven el Render-Blocking en celular */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <FirestoreProvider>
