@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, restaurantName, monthName, totalSales, totalOrders, totalTips, topDishes } = await req.json();
+    const body = await req.json();
+    const { email, restaurantName, monthName, totalSales, totalOrders, totalTips, topDishes } = body;
 
     if (!email) {
       return NextResponse.json({ error: "El correo destinatario es obligatorio." }, { status: 400 });
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
 
     console.log(`📩 [API send-monthly-report] Intentando enviar correo a: ${email}`);
 
-    const data = await resend.emails.send({
+    // 🟢 Ejecución de envío con respuesta destructurada { data, error }
+    const { data, error } = await resend.emails.send({
       from: "Servitotal <soporte@servitotal.expando.mx>",
       to: [email],
       subject: `📊 Resumen Financiero Mensual (${monthName}) - ${restaurantName}`,
@@ -35,8 +37,8 @@ export async function POST(req: Request) {
           </div>
 
           <div style="padding: 20px 0;">
-            <h2 style="color: #111827; font-size: 18px; margin-bottom: 5px;">Hola, administrador de ${restaurantName}</h2>
-            <p style="color: #4b5563; font-size: 14px; margin-top: 0;">Aquí tienes el desglose de rendimiento correspondiente al mes de <strong>${monthName}</strong>.</p>
+            <h2 style="color: #111827; font-size: 18px; margin-bottom: 5px;">Hola, administrador de ${restaurantName || "tu negocio"}</h2>
+            <p style="color: #4b5563; font-size: 14px; margin-top: 0;">Aquí tienes el desglose de rendimiento correspondiente al mes de <strong>${monthName || "este mes"}</strong>.</p>
 
             <!-- Grid de Métricas Principales -->
             <table width="100%" cellSpacing="0" cellPadding="0" style="margin: 20px 0;">
@@ -60,12 +62,12 @@ export async function POST(req: Request) {
 
             <!-- Platos más vendidos si existen -->
             ${
-              topDishes && topDishes.length > 0
+              Array.isArray(topDishes) && topDishes.length > 0
                 ? `
               <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 15px;">
                 <h3 style="font-size: 14px; color: #374151; margin-top: 0; margin-bottom: 10px;">🔥 Top Platillos más Vendidos</h3>
                 <ul style="padding-left: 20px; margin: 0; color: #4b5563; font-size: 14px;">
-                  ${topDishes.map((d: any) => `<li style="margin-bottom: 5px;"><strong>${d.name}</strong> - ${d.qty} unidades</li>`).join("")}
+                  ${topDishes.map((d: any) => `<li style="margin-bottom: 5px;"><strong>${d.name || d.nombre}</strong> - ${d.qty || d.cantidad || 0} unidades</li>`).join("")}
                 </ul>
               </div>
             `
@@ -85,10 +87,19 @@ export async function POST(req: Request) {
       `,
     });
 
-    console.log("✅ [API send-monthly-report] Respuesta de Resend:", data);
-    return NextResponse.json(data);
+    // 🟢 Si Resend devolvió un error de envío (ej. dominio no verificado), captúralo aquí:
+    if (error) {
+      console.error("❌ [API send-monthly-report] Error retornado por Resend:", error);
+      return NextResponse.json(
+        { error: error.message || "Resend rechazó el envío del correo." },
+        { status: 400 }
+      );
+    }
+
+    console.log("✅ [API send-monthly-report] Correo enviado exitosamente:", data);
+    return NextResponse.json({ success: true, data });
   } catch (err: any) {
-    console.error("❌ [API send-monthly-report] Error al enviar el reporte:", err);
+    console.error("❌ [API send-monthly-report] Excepción interna:", err);
     return NextResponse.json(
       { error: err?.message || "Error interno al enviar el reporte mensual." },
       { status: 500 }
