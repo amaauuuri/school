@@ -78,19 +78,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-// Dentro de tu AuthContext / AuthProvider:
-useEffect(() => {
-  // 🟢 Retrasamos ligeramente la inicialización de auth para no congelar el render del Hero en móviles
-  const timeout = setTimeout(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, 100);
+  useEffect(() => {
+    // 🟢 Diferimos la autenticación unos milisegundos para dar prioridad absoluta al render del Hero en móviles
+    const timer = setTimeout(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }, 150);
+  
+    return () => clearTimeout(timer);
+  }, []);
 
-  return () => clearTimeout(timeout);
-}, []);
   // Standard Email Sign In
   const signIn = async (email: string, password: string) => {
     setLoading(true);
