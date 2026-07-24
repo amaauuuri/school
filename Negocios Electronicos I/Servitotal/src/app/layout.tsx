@@ -5,9 +5,11 @@ import { AuthProvider } from "@/lib/AuthContext";
 import { FirestoreProvider } from "@/lib/FirestoreContext";
 import "./globals.css";
 
+// En src/app/layout.tsx
 const inter = Inter({
   subsets: ["latin"],
-  display: "swap",
+  display: "swap", // 🟢 Renderiza el texto inmediatamente con fuente del sistema
+  preload: true,   // 🟢 Pre-carga el archivo woff2 prioritariamente
   variable: "--font-inter",
 });
 

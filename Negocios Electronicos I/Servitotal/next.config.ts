@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // 🟢 Cabeceras de caché para que Hostinger e Internet le indiquen al celular guardar archivos en memoria local
+  // 🟢 Comprime automáticamente todas las respuestas (Gzip/Brotli)
+  compress: true,
+  
+  // 🟢 Optimización de producción
+  swcMinify: true,
+
   async headers() {
     return [
       {
