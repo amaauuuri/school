@@ -34,7 +34,6 @@ export function AdminSidebar() {
           <Link href="/admin/menu" className="public-header__logo dashboard-sidebar__brand">
             <span className="public-header__logo-icon">S</span>
             <span className="dashboard-sidebar__logo-text">Servitotal</span>
-            <span className="dashboard-sidebar__label">Servitotal</span>
           </Link>
           <div className="dashboard-sidebar__restaurant dashboard-sidebar__label">
             Admin · {restaurantName}
