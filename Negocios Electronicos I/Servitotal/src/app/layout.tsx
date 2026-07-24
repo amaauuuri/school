@@ -7,8 +7,7 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  display: "swap",       // 🟢 Muestra el texto instantáneamente mientras carga la fuente
-  preload: true,
+  display: "swap",
   variable: "--font-inter",
 });
 
@@ -26,11 +25,8 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* 🟢 Preconexión indispensable sugerida por Google PageSpeed */}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
       </head>
       <body className={inter.className}>
         <AuthProvider>

@@ -1,26 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/Button";
-
-// 🟢 Carga dinámica de animaciones pesadas para no bloquear el render en móviles
-const RestaurantFlowAnimation = dynamic(
-  () => import("@/components/landing/RestaurantFlowAnimation").then((mod) => mod.RestaurantFlowAnimation),
-  {
-    ssr: false, // 🟢 Desactiva el cálculo pesado en SSR para acelerar FCP
-    loading: () => <div style={{ minHeight: "280px", width: "100%" }} />, // Placeholder ligero
-  }
-);
-
-const RoleAnimatedIcon = dynamic(
-  () => import("@/components/landing/RoleAnimatedIcon").then((mod) => mod.RoleAnimatedIcon),
-  {
-    ssr: false,
-    loading: () => <span style={{ fontSize: "2rem" }}>⚙️</span>,
-  }
-);
+import { RestaurantFlowAnimation } from "@/components/landing/RestaurantFlowAnimation";
+import { RoleAnimatedIcon } from "@/components/landing/RoleAnimatedIcon";
 
 const BENEFICIOS = [
   {
