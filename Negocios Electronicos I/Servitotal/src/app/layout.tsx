@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { ServitotalProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/AuthContext";
 import { FirestoreProvider } from "@/lib/FirestoreContext";
 import "./globals.css";
+
+// 🟢 Carga optimizada de fuente local/SSR (cero peticiones externas en tiempo de ejecución)
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "Servitotal — POS para Restaurantes",
@@ -17,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+      <body className={inter.className}>
         <AuthProvider>
           <FirestoreProvider>
             <ServitotalProvider>{children}</ServitotalProvider>
