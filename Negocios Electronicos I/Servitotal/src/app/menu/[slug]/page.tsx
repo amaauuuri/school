@@ -14,42 +14,81 @@ interface MenuItem {
   imagen?: string;
 }
 
-
 interface RestaurantInfo {
   name: string;
   phone?: string;
   address?: string;
 }
 
-// 🎯 Lógica inteligente para asignar fotos distintas y relevantes según el nombre del platillo
-function getSmartFoodImage(nombre: string, categoria: string, id: string): string {
-  const nameLower = nombre.toLowerCase();
-  const catLower = categoria.toLowerCase();
+// 🎯 Banco de imágenes curadas por categoría + asignador de unicidad por ID
+const FOOD_COLLECTIONS: Record<string, string[]> = {
+  tacos: [
+    "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b",
+    "https://images.unsplash.com/photo-1565299585323-38d6b0865b47",
+    "https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c",
+    "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f"
+  ],
+  burger: [
+    "https://images.unsplash.com/photo-1568901346375-23c9450c58cd",
+    "https://images.unsplash.com/photo-1586190848861-99aa4a171e90",
+    "https://images.unsplash.com/photo-1550547660-d9450f859349"
+  ],
+  pizza: [
+    "https://images.unsplash.com/photo-1513104890138-7c749659a591",
+    "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee",
+    "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38"
+  ],
+  mexican: [
+    "https://images.unsplash.com/photo-1599789197514-47270cd526b4",
+    "https://images.unsplash.com/photo-1584208124888-3a20b9c799e2",
+    "https://images.unsplash.com/photo-1613514785940-daed07799d9b"
+  ],
+  coffee: [
+    "https://images.unsplash.com/photo-1534778101976-62847782c213",
+    "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd",
+    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+    "https://images.unsplash.com/photo-1509042239860-f550ce710b93"
+  ],
+  drink: [
+    "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd",
+    "https://images.unsplash.com/photo-1608270586620-248524c67de9",
+    "https://images.unsplash.com/photo-1622483767028-3f66f32aef97",
+    "https://images.unsplash.com/photo-1551024709-8f23befc6f87"
+  ],
+  dessert: [
+    "https://images.unsplash.com/photo-1578985545062-69928b1d9587",
+    "https://images.unsplash.com/photo-1560008581-09826d1de69e",
+    "https://images.unsplash.com/photo-1587314168485-3236d6710814"
+  ],
+  general: [
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
+    "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327",
+    "https://images.unsplash.com/photo-1498837167922-ddd27525d352",
+    "https://images.unsplash.com/photo-1493770348161-369560ae357d"
+  ]
+};
 
-  // Diccionario de imágenes específicas por palabras clave comunes
-  if (nameLower.includes("taco")) return "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("hamburguesa") || nameLower.includes("burger")) return "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("pizza")) return "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("chilaquil") || nameLower.includes("enchilada")) return "https://images.unsplash.com/photo-1599789197514-47270cd526b4?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("café") || nameLower.includes("capuchino") || nameLower.includes("latte")) return "https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("cerveza") || nameLower.includes("beer")) return "https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("refresco") || nameLower.includes("coca") || nameLower.includes("soda")) return "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("pastel") || nameLower.includes("cake")) return "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=300&q=80";
-  if (nameLower.includes("helado") || nameLower.includes("ice cream")) return "https://images.unsplash.com/photo-1560008581-09826d1de69e?auto=format&fit=crop&w=300&q=80";
+function getAccurateDishImage(nombre: string, categoria: string, id: string): string {
+  const cleanName = nombre.toLowerCase().trim();
+  const cleanCat = categoria.toLowerCase().trim();
 
-  // Si es una bebida genérica
-  if (catLower.includes("bebida") || catLower.includes("drink")) {
-    return "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=300&q=80";
-  }
+  let collectionKey = "general";
 
-  // Si es un postre genérico
-  if (catLower.includes("postre") || catLower.includes("dessert")) {
-    return "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=300&q=80";
-  }
+  if (cleanName.includes("taco")) collectionKey = "tacos";
+  else if (cleanName.includes("hamburguesa") || cleanName.includes("burger")) collectionKey = "burger";
+  else if (cleanName.includes("pizza")) collectionKey = "pizza";
+  else if (cleanName.includes("chilaquil") || cleanName.includes("enchilada")) collectionKey = "mexican";
+  else if (cleanName.includes("latte") || cleanName.includes("capuchino") || cleanName.includes("cafe")) collectionKey = "coffee";
+  else if (cleanCat.includes("bebida") || cleanCat.includes("drink")) collectionKey = "drink";
+  else if (cleanCat.includes("postre") || cleanCat.includes("dessert")) collectionKey = "dessert";
 
-  // Si no coincide con ninguna palabra, usa un generador dinámico con 'seed' único para que cada platillo tenga una foto diferente
-  const seed = Array.from(id + nombre).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return `https://picsum.photos/seed/${seed}/300/300`;
+  const pool = FOOD_COLLECTIONS[collectionKey] || FOOD_COLLECTIONS.general;
+
+  // Calculamos un índice invariable a partir del ID para que el mismo platillo siempre tenga la misma foto
+  const charCodeSum = Array.from(id).reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const selectedUrl = pool[charCodeSum % pool.length];
+
+  return `${selectedUrl}?auto=format&fit=crop&w=300&q=80`;
 }
 
 export default function PublicMenuPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -127,8 +166,12 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
             const itemNombre = item.name || item.nombre || "Platillo";
             const itemCategoria = item.category || item.categoria || "Alimentos";
 
-            // Si el objeto en Firestore ya trae una propiedad 'image' o 'imagen', la usa; si no, genera una inteligente
-            const finalImage = item.image || item.imagen || getSmartFoodImage(itemNombre, itemCategoria, itemId);
+            // Si el admin subió su propia foto (image/imagen/imageUrl), la respeta. Si no, usa la precisa de Unsplash.
+            const finalImage =
+              item.image ||
+              item.imagen ||
+              item.imageUrl ||
+              getAccurateDishImage(itemNombre, itemCategoria, itemId);
 
             return {
               id: itemId,
@@ -136,7 +179,12 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
               descripcion: item.description || item.descripcion || "",
               precio: Number(item.price || item.precio || 0),
               categoria: itemCategoria,
-              disponible: item.available !== undefined ? item.available : (item.disponible !== undefined ? item.disponible : true),
+              disponible:
+                item.available !== undefined
+                  ? item.available
+                  : item.disponible !== undefined
+                  ? item.disponible
+                  : true,
               imagen: finalImage,
             };
           });
@@ -209,7 +257,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
         ))}
       </div>
 
-      {/* Lista de Platillos con Tarjetas e Imágenes Dinámicas */}
+      {/* Lista de Platillos */}
       <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "12px" }}>
         {filteredItems.length === 0 ? (
           <p style={{ textAlign: "center", color: "#9ca3af", fontSize: "0.9rem", marginTop: "20px" }}>
@@ -230,28 +278,26 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
                 border: "1px solid #f3f4f6"
               }}
             >
-              {/* Imagen con manejo inteligente */}
               <img 
-  src={item.imagen} 
-  alt={item.nombre} 
-  loading="lazy"          // 🟢 No frena la carga inicial del sitio
-  decoding="async"        // 🟢 Decodifica la imagen sin congelar el hilo principal
-  width={75} 
-  height={75}
-  onError={(e) => {
-    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=80";
-  }}
-  style={{ 
-    width: "75px", 
-    height: "75px", 
-    objectFit: "cover", 
-    borderRadius: "10px",
-    backgroundColor: "#fff3ec",
-    flexShrink: 0
-  }} 
-/>
+                src={item.imagen} 
+                alt={item.nombre} 
+                loading="lazy"
+                decoding="async"
+                width={75} 
+                height={75}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=150&q=80";
+                }}
+                style={{ 
+                  width: "75px", 
+                  height: "75px", 
+                  objectFit: "cover", 
+                  borderRadius: "10px",
+                  backgroundColor: "#fff3ec",
+                  flexShrink: 0
+                }} 
+              />
 
-              {/* Contenido del Platillo */}
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
                   <h3 style={{ margin: "0 0 4px 0", fontSize: "0.95rem", color: "#111827", fontWeight: 600 }}>
