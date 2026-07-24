@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -19,7 +19,11 @@ interface RestaurantInfo {
   address?: string;
 }
 
-export default function PublicMenuPage({ params }: { params: { slug: string } }) {
+export default function PublicMenuPage({ params }: { params: Promise<{ slug: string }> }) {
+  // 🟢 Desempaquetamos la promesa de params requerida en Next.js 15
+  const resolvedParams = use(params);
+  const slug = resolvedParams.slug;
+
   const [loading, setLoading] = useState(true);
   const [restaurant, setRestaurant] = useState<RestaurantInfo | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -31,7 +35,7 @@ export default function PublicMenuPage({ params }: { params: { slug: string } })
         // 1. Buscar restaurante por slug o ID
         const qRest = query(
           collection(db, "restaurants"),
-          where("slug", "==", params.slug)
+          where("slug", "==", slug)
         );
         const restSnap = await getDocs(qRest);
 
@@ -57,8 +61,10 @@ export default function PublicMenuPage({ params }: { params: { slug: string } })
       }
     }
 
-    fetchPublicMenu();
-  }, [params.slug]);
+    if (slug) {
+      fetchPublicMenu();
+    }
+  }, [slug]);
 
   if (loading) {
     return (
