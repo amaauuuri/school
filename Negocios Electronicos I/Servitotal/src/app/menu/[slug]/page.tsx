@@ -14,6 +14,7 @@ interface MenuItem {
   imagen?: string;
 }
 
+
 interface RestaurantInfo {
   name: string;
   phone?: string;
@@ -231,21 +232,24 @@ export default function PublicMenuPage({ params }: { params: Promise<{ slug: str
             >
               {/* Imagen con manejo inteligente */}
               <img 
-                src={item.imagen} 
-                alt={item.nombre} 
-                onError={(e) => {
-                  // Fallback si la imagen no logra cargar
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80";
-                }}
-                style={{ 
-                  width: "75px", 
-                  height: "75px", 
-                  objectFit: "cover", 
-                  borderRadius: "10px",
-                  backgroundColor: "#fff3ec",
-                  flexShrink: 0
-                }} 
-              />
+  src={item.imagen} 
+  alt={item.nombre} 
+  loading="lazy"          // 🟢 No frena la carga inicial del sitio
+  decoding="async"        // 🟢 Decodifica la imagen sin congelar el hilo principal
+  width={75} 
+  height={75}
+  onError={(e) => {
+    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=80";
+  }}
+  style={{ 
+    width: "75px", 
+    height: "75px", 
+    objectFit: "cover", 
+    borderRadius: "10px",
+    backgroundColor: "#fff3ec",
+    flexShrink: 0
+  }} 
+/>
 
               {/* Contenido del Platillo */}
               <div style={{ flex: 1 }}>

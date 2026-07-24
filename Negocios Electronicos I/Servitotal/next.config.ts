@@ -1,20 +1,28 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  redirects: async () => [
-    {
-      source: "/precios",
-      destination: "/servicios",
-      permanent: true,
-    },
-  ],
-  images: {
-    remotePatterns: [
+  // 🟢 Cabeceras de caché para que Hostinger e Internet le indiquen al celular guardar archivos en memoria local
+  async headers() {
+    return [
       {
-        protocol: "https",
-        hostname: "images.unsplash.com",
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
       },
-    ],
+      {
+        source: "/images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
   },
 };
 

@@ -104,7 +104,7 @@ export function RestaurantFlowAnimation() {
 
         {/* Zone 3: Salon/Dining Area */}
         <rect x="35" y="160" width="330" height="105" rx="8" fill="rgba(232, 93, 4, 0.02)" stroke="rgba(28, 25, 23, 0.08)" strokeWidth="1.5" />
-        <text x="200" y="250" textAnchor="middle" fontSize="9" fontWeight="700" fill="var(--color-text-muted)" letterSpacing="0.05em">ÁREA DE COMENSALES Y MESAS</text>
+        <text x="200" y="250" textAnchor="middle" fontSize="9" fontWeight="700" fill="var(--color-text-muted)" letterSpacing="0.05em"></text>
 
         {/* Connection Paths (Dashed lines) */}
         {/* Mesa -> Caja */}

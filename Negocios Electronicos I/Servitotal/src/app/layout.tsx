@@ -24,6 +24,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      {/* 🟢 Agregamos <head> explícito para la preconexión de imágenes */}
+      <head>
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://picsum.photos" crossOrigin="anonymous" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <FirestoreProvider>
@@ -34,4 +40,3 @@ export default function RootLayout({
     </html>
   );
 }
-
