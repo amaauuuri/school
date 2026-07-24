@@ -26,14 +26,17 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     }
   }, [user, loading, router]);
 
-  // Redirect to servicios if not subscribed
-  useEffect(() => {
-    if (!loading && user && user.emailVerified && !loadingData) {
+// Redirect to precios if not subscribed (except for STAFF)
+useEffect(() => {
+  if (!loading && user && user.emailVerified && !loadingData && profile) {
+    // Si es STAFF, la suscripción la cubre el dueño del restaurante
+    if (profile.role !== "STAFF") {
       if (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED") {
-        router.push("/servicios");
+        router.push("/precios");
       }
     }
-  }, [user, loading, restaurantConfig, loadingData, router]);
+  }
+}, [user, profile, loading, restaurantConfig, loadingData, router]);
 
   // Handle Resend Cooldown timer
   useEffect(() => {
@@ -62,10 +65,10 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     return null; // Will redirect in useEffect
   }
 
-  // Redirect if not subscribed
-  if (user.emailVerified && (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED")) {
-    return null; // Will redirect in useEffect
-  }
+// Redirect if not subscribed (ADMIN only)
+if (profile?.role !== "STAFF" && user.emailVerified && (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED")) {
+  return null; // Will redirect in useEffect
+}
 
   // Force Email Verification
   if (!user.emailVerified) {

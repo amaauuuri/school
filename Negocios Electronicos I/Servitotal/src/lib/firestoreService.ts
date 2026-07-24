@@ -74,7 +74,6 @@ export async function initRestaurantIfNeeded(
       createdAt: new Date().toISOString(),
     };
     await setDoc(restaurantRef, restaurantDoc);
-    // Note: No automatic menu seeding. New restaurants start with a clean slate ready for client configuration.
   }
 }
 
@@ -112,7 +111,6 @@ export function subscribeMenu(
       id: d.id,
       ...(d.data() as Omit<MenuItem, "id">),
     }));
-    // Sort by category then name for consistent ordering
     items.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
     callback(items);
   });
@@ -147,10 +145,6 @@ export async function deleteMenuItem(
 
 // ─── Orders Global ────────────────────────────────────────────────────────────
 
-/**
- * Creates a new active order for a table.
- * Returns the Firestore document ID.
- */
 export async function createOrder(
   restaurantId: string,
   mesaNumero: number,
@@ -174,9 +168,6 @@ export async function createOrder(
   return docRef.id;
 }
 
-/**
- * Updates only the items array and recalculates totalAmount.
- */
 export async function updateOrderItems(
   orderId: string,
   items: OrderItem[]
@@ -198,12 +189,13 @@ export async function updateOrderStatus(
 }
 
 /**
- * Marks the order as paid, then writes an immutable SaleRecord to sales_history.
+ * Marks the order as paid, then writes an immutable SaleRecord to sales_history including tip.
  */
 export async function closeOrderAndRecord(
   order: GlobalOrder,
   paymentMethod: PaymentMethod,
-  taxRate: number
+  taxRate: number,
+  tip: number = 0
 ): Promise<void> {
   const batch = writeBatch(db);
 
@@ -214,11 +206,12 @@ export async function closeOrderAndRecord(
   // 2. Write immutable sales_history record
   const saleId = generateId();
   const saleRef = doc(db, "sales_history", saleId);
-  const saleRecord: Omit<SaleRecord, "id"> = {
+  const saleRecord: Omit<SaleRecord, "id"> & { tip?: number } = {
     restaurantId: order.restaurantId,
     mesaNumero: order.mesaNumero,
     items: order.items,
     totalAmount: order.totalAmount,
+    tip, // 👈 Ahora sí guarda la propina en Firestore
     paymentMethod,
     closedAt: new Date().toISOString(),
     poolStaff: order.poolStaff,
@@ -228,9 +221,6 @@ export async function closeOrderAndRecord(
   await batch.commit();
 }
 
-/**
- * Real-time listener for all non-paid orders of a restaurant.
- */
 export function subscribeActiveOrders(
   restaurantId: string,
   callback: (orders: GlobalOrder[]) => void
@@ -263,9 +253,6 @@ export function subscribeActiveOrders(
 
 // ─── Sales History ────────────────────────────────────────────────────────────
 
-/**
- * Real-time listener for today's sales (for admin reports).
- */
 export function subscribeTodaySales(
   restaurantId: string,
   callback: (sales: SaleRecord[]) => void
@@ -289,10 +276,6 @@ export function subscribeTodaySales(
   });
 }
 
-/**
- * Batches the import of multiple menu items.
- * Divides them in chunks of 500 (Firestore batch limit) and executes them.
- */
 export async function importMenuItemsBatch(
   restaurantId: string,
   items: Omit<MenuItem, "id">[]
@@ -309,4 +292,3 @@ export async function importMenuItemsBatch(
     await batch.commit();
   }
 }
-

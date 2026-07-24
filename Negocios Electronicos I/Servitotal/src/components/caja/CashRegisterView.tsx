@@ -13,9 +13,12 @@ const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; icon: string }[] = [
   { id: "transferencia", label: "Transferencia", icon: "📱" },
 ];
 
+const TIP_PERCENTAGES = [0, 10, 15, 20];
+
 export function CashRegisterView() {
   const router = useRouter();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("efectivo");
+  const [tipPercentage, setTipPercentage] = useState<number>(10); // 10% por defecto
   const [closing, setClosing] = useState(false);
   const [closedMsg, setClosedMsg] = useState(false);
 
@@ -38,14 +41,14 @@ export function CashRegisterView() {
   const taxRate = restaurantConfig?.taxRate ?? 0.16;
   const subtotal = selectedOrder?.totalAmount ?? 0;
   const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  const tipAmount = subtotal * (tipPercentage / 100);
+  const total = subtotal + tax + tipAmount;
 
   async function handleCloseTable() {
     if (!selectedOrder) return;
     setClosing(true);
     try {
-      await closeOrderAndRecord(selectedOrder, paymentMethod);
-      setClosedMsg(true);
+      await closeOrderAndRecord(selectedOrder, paymentMethod, tipAmount);      setClosedMsg(true);
 
       const closedOrderId = selectedOrder.id;
 
@@ -147,6 +150,40 @@ export function CashRegisterView() {
           <span>IVA ({((taxRate) * 100).toFixed(0)}%)</span>
           <span>{formatCurrency(tax)}</span>
         </div>
+
+        {/* ── Selector de Propina ────────────────────────────────────────── */}
+        <div className="bill-summary__row" style={{ flexDirection: "column", alignItems: "stretch", gap: "0.5rem", padding: "0.5rem 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Propina ({tipPercentage}%)</span>
+            <span style={{ fontWeight: 600, color: "var(--color-success, #16a34a)" }}>
+              {formatCurrency(tipAmount)}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "0.35rem" }}>
+            {TIP_PERCENTAGES.map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                onClick={() => setTipPercentage(pct)}
+                disabled={closing}
+                style={{
+                  flex: 1,
+                  padding: "0.25rem 0.5rem",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  borderRadius: "var(--radius-sm, 6px)",
+                  border: "1px solid var(--color-border, #cbd5e1)",
+                  background: tipPercentage === pct ? "#e85d04" : "transparent",
+                  color: tipPercentage === pct ? "white" : "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                {pct === 0 ? "Sin propina" : `${pct}%`}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="bill-summary__row bill-summary__row--total">
           <span>Total</span>
           <span>{formatCurrency(total)}</span>

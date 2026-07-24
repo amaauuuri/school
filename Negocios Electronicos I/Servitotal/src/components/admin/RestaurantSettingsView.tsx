@@ -9,13 +9,27 @@ import { db } from "@/lib/firebase";
 
 interface StaffMember extends UserProfile {}
 
+// Helper seguro para determinar el límite de mesas según el plan activo
+function getMaxTablesByPlan(planId?: any): number {
+  const currentPlan = String(planId || "starter").toLowerCase();
+  
+  if (currentPlan.includes("pro")) return 25;
+  if (currentPlan.includes("enterprise") || currentPlan.includes("ilimitado")) return 50;
+  return 8; // Plan Starter / Básico por defecto
+}
+
 export function RestaurantSettingsView() {
   const { restaurantConfig, updateRestaurantConfig, loadingData } = useFirestore();
   const { profile, createStaffAccount } = useAuth();
 
+  // Límite máximo según la suscripción
+  const maxAllowedTables = getMaxTablesByPlan((restaurantConfig as any)?.planId);
+
   // Config form
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
+  const [reportStatus, setReportStatus] = useState("");
   const [form, setForm] = useState({
     name: "",
     address: "",
@@ -28,16 +42,92 @@ export function RestaurantSettingsView() {
   // Keep form in sync with live restaurantConfig
   useEffect(() => {
     if (restaurantConfig) {
+      const maxTables = getMaxTablesByPlan((restaurantConfig as any)?.planId);
       setForm({
         name: restaurantConfig.name || "",
         address: restaurantConfig.address || "",
         phone: restaurantConfig.phone || "",
         email: restaurantConfig.email || "",
-        tableCount: restaurantConfig.tableCount || 8,
+        tableCount: Math.min(maxTables, restaurantConfig.tableCount || 8),
         taxRate: 0.16, // Always fixed at 16%
       });
     }
   }, [restaurantConfig]);
+
+  async function handleSendMonthlyReport() {
+    if (!form.email && !restaurantConfig?.email) {
+      setReportStatus("⚠️ Primero ingresa un correo de contacto arriba.");
+      return;
+    }
+  
+    setSendingReport(true);
+    setReportStatus("");
+  
+    try {
+      // 1. Obtener el rango de fechas para el mes actual
+      const now = new Date();
+      const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      
+      // Consulta a sales_history de Firestore del mes actual
+      const q = query(
+        collection(db, "sales_history"),
+        where("restaurantId", "==", profile?.uid),
+        where("closedAt", ">=", firstDayMonth)
+      );
+      const snap = await getDocs(q);
+  
+      let totalSales = 0;
+      let totalTips = 0;
+      let totalOrders = snap.docs.length;
+      const dishCountMap: Record<string, number> = {};
+  
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        totalSales += data.totalAmount || 0;
+        totalTips += data.tip || 0;
+  
+        // Calcular más vendidos
+        if (Array.isArray(data.items)) {
+          data.items.forEach((item: any) => {
+            dishCountMap[item.nombre] = (dishCountMap[item.nombre] || 0) + item.cantidad;
+          });
+        }
+      });
+  
+      // Ordenar Top 3 platos
+      const topDishes = Object.entries(dishCountMap)
+        .map(([name, qty]) => ({ name, qty }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 3);
+  
+      const monthName = now.toLocaleString("es-MX", { month: "long", year: "numeric" });
+  
+      // 2. Disparar API de correo
+      const res = await fetch("/api/send-monthly-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email || profile?.email,
+          restaurantName: form.name || "Tu Restaurante",
+          monthName: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+          totalSales,
+          totalOrders,
+          totalTips,
+          topDishes,
+        }),
+      });
+  
+      if (!res.ok) throw new Error("Error al procesar el correo.");
+  
+      setReportStatus("✅ ¡Reporte enviado con éxito a tu correo!");
+      setTimeout(() => setReportStatus(""), 4000);
+    } catch (err: any) {
+      setReportStatus("❌ Hubo un error al enviar el reporte.");
+      console.error(err);
+    } finally {
+      setSendingReport(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -45,6 +135,7 @@ export function RestaurantSettingsView() {
     try {
       await updateRestaurantConfig({
         ...form,
+        tableCount: Math.min(maxAllowedTables, Math.max(1, form.tableCount)),
         taxRate: 0.16, // Always enforce 16% IVA
       });
       setSaved(true);
@@ -175,14 +266,17 @@ export function RestaurantSettingsView() {
                   type="number"
                   className="form-input"
                   min={1}
-                  max={50}
+                  max={maxAllowedTables}
                   value={form.tableCount}
                   onChange={(e) =>
-                    setForm({ ...form, tableCount: Math.min(50, Math.max(1, parseInt(e.target.value) || 1)) })
+                    setForm({
+                      ...form,
+                      tableCount: Math.min(maxAllowedTables, Math.max(1, parseInt(e.target.value) || 1)),
+                    })
                   }
                 />
                 <span className="text-sm text-muted">
-                  Capacidad de mesas configurable (máximo 50 mesas según tu suscripción).
+                  Plan actual: <strong>{String((restaurantConfig as any)?.planId || "STARTER").toUpperCase()}</strong> (Máximo {maxAllowedTables} mesas).
                 </span>
               </div>
 
@@ -220,6 +314,32 @@ export function RestaurantSettingsView() {
           )}
         </div>
       </form>
+
+      {/* TARJETA REPORTE FINANCIERO POR CORREO */}
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 style={{ fontWeight: 600, marginBottom: "0.25rem" }}>Reporte Financiero Mensual</h3>
+            <p className="text-sm text-muted">
+              Envía un resumen ejecutivo con el acumulado de ventas, comandas y propinas del mes actual a <strong>{form.email || "tu correo"}</strong>.
+            </p>
+          </div>
+          <Button 
+            type="button"
+            onClick={handleSendMonthlyReport} 
+            variant="outline" 
+            disabled={sendingReport}
+            style={{ borderColor: "#e85d04", color: "#e85d04", whiteSpace: "nowrap" }}
+          >
+            {sendingReport ? "Enviando..." : "📩 Enviar reporte ahora"}
+          </Button>
+        </div>
+        {reportStatus && (
+          <div style={{ marginTop: "0.75rem", fontSize: "0.875rem", fontWeight: 500 }}>
+            {reportStatus}
+          </div>
+        )}
+      </div>
 
       {/* Staff Section */}
       <div className="card">

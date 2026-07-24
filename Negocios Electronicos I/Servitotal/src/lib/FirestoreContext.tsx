@@ -61,7 +61,7 @@ interface FirestoreContextType {
   createOrder: (mesaNumero: number, items: OrderItem[], staffUid: string) => Promise<string>;
   updateOrderItems: (orderId: string, items: OrderItem[]) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
-  closeOrderAndRecord: (order: GlobalOrder, paymentMethod: PaymentMethod) => Promise<void>;
+  closeOrderAndRecord: (order: GlobalOrder, paymentMethod: PaymentMethod, tipAmount?: number) => Promise<void>;
 }
 
 const FirestoreContext = createContext<FirestoreContextType | null>(null);
@@ -77,16 +77,9 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
   const [salesHistory, setSalesHistory] = useState<SaleRecord[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
-  // restaurantId = admin's UID (or the admin's restaurantName-based id for staff)
-  // For simplicity, staff find restaurantId from their profile.restaurantName matching
-  // the restaurant document. Since the admin's UID IS the restaurantId, we look it up
-  // for staff by searching the users collection (already done in AuthContext profile).
-  // For now, ADMIN restaurantId = user.uid, STAFF restaurantId = needs to be stored in profile.
-  // We'll derive it from profile.restaurantId (added below) or fall back to user.uid for admin.
   const restaurantId = useMemo(() => {
     if (!profile) return null;
     if (profile.role === "ADMIN") return user?.uid ?? null;
-    // Staff need restaurantId stored in their profile
     return (profile as any).restaurantId ?? null;
   }, [profile, user]);
 
@@ -96,7 +89,6 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // For ADMIN: ensure the restaurant document and menu seed exist
     if (profile.role === "ADMIN") {
       initRestaurantIfNeeded(restaurantId, {
         name: profile.name,
@@ -107,7 +99,6 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
 
     setLoadingData(true);
 
-    // Subscribe to all real-time listeners
     const unsubs: Array<() => void> = [];
 
     unsubs.push(
@@ -121,7 +112,6 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
 
     unsubs.push(subscribeActiveOrders(restaurantId, setActiveOrders));
 
-    // Sales history only for admins (used in reports)
     if (profile.role === "ADMIN") {
       unsubs.push(subscribeTodaySales(restaurantId, setSalesHistory));
     }
@@ -194,9 +184,9 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const closeOrderAndRecord = useCallback(
-    async (order: GlobalOrder, paymentMethod: PaymentMethod) => {
+    async (order: GlobalOrder, paymentMethod: PaymentMethod, tipAmount: number = 0) => {
       const taxRate = restaurantConfig?.taxRate ?? 0.16;
-      await fsCloseOrderAndRecord(order, paymentMethod, taxRate);
+      await fsCloseOrderAndRecord(order, paymentMethod, taxRate, tipAmount);
     },
     [restaurantConfig]
   );

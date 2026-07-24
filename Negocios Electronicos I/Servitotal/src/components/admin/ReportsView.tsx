@@ -62,25 +62,26 @@ export function ReportsView() {
       constraints.push(where("closedAt", "<=", endIso));
     }
 
-    // Direct single field filter query to bypass custom index requirement.
-    // Client-side sorting for robustness.
     const q = query(collection(db, "sales_history"), ...constraints);
 
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<SaleRecord, "id">),
-      }));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const docs = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<SaleRecord, "id">),
+        }));
 
-      // Sort client-side by closedAt ascending
-      docs.sort((a, b) => a.closedAt.localeCompare(b.closedAt));
+        docs.sort((a, b) => a.closedAt.localeCompare(b.closedAt));
 
-      setSales(docs);
-      setLoading(false);
-    }, (err) => {
-      console.error("Sales query error:", err);
-      setLoading(false);
-    });
+        setSales(docs);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Sales query error:", err);
+        setLoading(false);
+      }
+    );
 
     return () => unsub();
   }, [restaurantId, filterType, customStart, customEnd]);
@@ -90,6 +91,7 @@ export function ReportsView() {
     if (sales.length === 0) {
       return {
         totalSales: 0,
+        totalTips: 0,
         ordersToday: 0,
         averageTicket: 0,
         topDishes: [] as { name: string; quantity: number; revenue: number }[],
@@ -98,6 +100,10 @@ export function ReportsView() {
     }
 
     const totalSales = sales.reduce((s, r) => s + r.totalAmount, 0);
+    const totalTips = sales.reduce((s, r) => {
+      const rec = r as SaleRecord & { tip?: number; propina?: number };
+      return s + (rec.tip ?? rec.propina ?? 0);
+    }, 0);
     const ordersToday = sales.length;
     const averageTicket = ordersToday > 0 ? totalSales / ordersToday : 0;
 
@@ -117,19 +123,18 @@ export function ReportsView() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    // Grouping: Hour if 1 single day, Date/Day if multi-day
-    const isSingleDay = filterType === "day" || (filterType === "custom" && customStart && customStart === customEnd);
+    // Grouping
+    const isSingleDay =
+      filterType === "day" || (filterType === "custom" && customStart && customStart === customEnd);
     const groupMap = new Map<string, number>();
 
     sales.forEach((record) => {
       let key = "";
       const dateObj = new Date(record.closedAt);
       if (isSingleDay) {
-        // Group by hour: e.g. "14:00"
         const hourStr = String(dateObj.getHours()).padStart(2, "0");
         key = `${hourStr}:00`;
       } else {
-        // Group by date: e.g. "23/07"
         const dayStr = String(dateObj.getDate()).padStart(2, "0");
         const monthStr = String(dateObj.getMonth() + 1).padStart(2, "0");
         key = `${dayStr}/${monthStr}`;
@@ -141,7 +146,7 @@ export function ReportsView() {
       .map(([label, amount]) => ({ label, amount }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
-    return { totalSales, ordersToday, averageTicket, topDishes, chartData };
+    return { totalSales, totalTips, ordersToday, averageTicket, topDishes, chartData };
   }, [sales, filterType, customStart, customEnd]);
 
   const maxSales = useMemo(() => {
@@ -149,26 +154,42 @@ export function ReportsView() {
     return Math.max(...metrics.chartData.map((s) => s.amount));
   }, [metrics.chartData]);
 
-  const isSingleDay = filterType === "day" || (filterType === "custom" && customStart && customStart === customEnd);
+  const isSingleDay =
+    filterType === "day" || (filterType === "custom" && customStart && customStart === customEnd);
 
   return (
     <>
       {/* ── Filter Selector ────────────────────────────────────────────────── */}
       <div className="card" style={{ marginBottom: "1.5rem" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "1rem",
+          }}
+        >
           <div>
             <h3 style={{ fontWeight: 600, fontSize: "1.1rem" }}>Rango de Reporte</h3>
             <p className="text-sm text-muted">Filtra y visualiza el historial de ventas del negocio</p>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center" }}>
-            <div style={{ display: "flex", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
+            <div
+              style={{
+                display: "flex",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--color-border)",
+                overflow: "hidden",
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setFilterType("day")}
                 style={{
                   padding: "0.5rem 0.75rem",
                   border: "none",
-                  background: filterType === "day" ? "var(--color-primary)" : "var(--color-surface)",
+                  background: filterType === "day" ? "#e85d04" : "var(--color-surface)",
                   color: filterType === "day" ? "white" : "var(--color-text)",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -183,7 +204,7 @@ export function ReportsView() {
                 style={{
                   padding: "0.5rem 0.75rem",
                   border: "none",
-                  background: filterType === "week" ? "var(--color-primary)" : "var(--color-surface)",
+                  background: filterType === "week" ? "#e85d04" : "var(--color-surface)",
                   color: filterType === "week" ? "white" : "var(--color-text)",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -198,7 +219,7 @@ export function ReportsView() {
                 style={{
                   padding: "0.5rem 0.75rem",
                   border: "none",
-                  background: filterType === "month" ? "var(--color-primary)" : "var(--color-surface)",
+                  background: filterType === "month" ? "#e85d04" : "var(--color-surface)",
                   color: filterType === "month" ? "white" : "var(--color-text)",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -213,7 +234,7 @@ export function ReportsView() {
                 style={{
                   padding: "0.5rem 0.75rem",
                   border: "none",
-                  background: filterType === "custom" ? "var(--color-primary)" : "var(--color-surface)",
+                  background: filterType === "custom" ? "#e85d04" : "var(--color-surface)",
                   color: filterType === "custom" ? "white" : "var(--color-text)",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -250,17 +271,22 @@ export function ReportsView() {
       </div>
 
       {loading ? (
-
-<div className="text-muted" style={{ padding: "3rem", textAlign: "center" }}>Cargando métricas...</div>      ) : (
+        <div className="text-muted" style={{ padding: "3rem", textAlign: "center" }}>
+          Cargando métricas...
+        </div>
+      ) : (
         <>
           {/* ── KPI cards ──────────────────────────────────────────────────────── */}
-          <div className="grid grid--3" style={{ marginBottom: "1.5rem" }}>
+          <div className="grid grid--4" style={{ marginBottom: "1.5rem" }}>
             <div className="stat-card">
               <div className="stat-card__label">Ventas totales</div>
               <div className="stat-card__value">{formatCurrency(metrics.totalSales)}</div>
-              <div className="stat-card__change">
-                {metrics.ordersToday > 0 ? `${metrics.ordersToday} órdenes` : "Sin ventas aún"}
-              </div>
+              <div className="stat-card__change">Exclusivo de platillos y menú</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-card__label">Ingreso por propinas</div>
+              <div className="stat-card__value">{formatCurrency(metrics.totalTips)}</div>
+              <div className="stat-card__change">Acumulado para el personal</div>
             </div>
             <div className="stat-card">
               <div className="stat-card__label">Órdenes concretadas</div>
@@ -275,7 +301,7 @@ export function ReportsView() {
           </div>
 
           <div className="grid grid--2">
-            {/* Grouped Sales Chart */}
+            {/* Vertical Bar Chart (Elevated Bars) */}
             <div className="card">
               <h3 style={{ fontWeight: 600, marginBottom: "1.25rem" }}>
                 {isSingleDay ? "Ventas por hora" : "Ventas por fecha"}
@@ -286,17 +312,70 @@ export function ReportsView() {
                 </div>
               ) : (
                 <div style={{ overflowX: "auto", width: "100%", paddingBottom: "0.5rem" }}>
-                  <div className="chart-bars" style={{ minWidth: "500px", display: "flex", gap: "0.75rem", alignItems: "flex-end", height: "200px" }}>
-                    {metrics.chartData.map((entry) => (
-                      <div key={entry.label} className="chart-bar" style={{ flex: 1, minWidth: "45px" }}>
+                  <div
+                    style={{
+                      minWidth: metrics.chartData.length * 50 > 300 ? `${metrics.chartData.length * 55}px` : "100%",
+                      display: "flex",
+                      gap: "0.85rem",
+                      alignItems: "flex-end",
+                      height: "220px",
+                      paddingTop: "1.75rem",
+                      borderBottom: "2px solid var(--color-border, #e2e8f0)",
+                    }}
+                  >
+                    {metrics.chartData.map((entry) => {
+                      const heightPercent = Math.max((entry.amount / maxSales) * 100, 6);
+                      return (
                         <div
-                          className="chart-bar__fill"
-                          style={{ height: `${(entry.amount / maxSales) * 100}%` }}
-                          title={`${entry.label}: ${formatCurrency(entry.amount)}`}
-                        />
-                        <span className="chart-bar__label">{entry.label}</span>
-                      </div>
-                    ))}
+                          key={entry.label}
+                          style={{
+                            flex: 1,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            height: "100%",
+                            justifyContent: "flex-end",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              color: "var(--color-text, #1e293b)",
+                              marginBottom: "0.3rem",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            ${entry.amount >= 1000 ? `${(entry.amount / 1000).toFixed(1)}k` : Math.round(entry.amount)}
+                          </span>
+
+                          <div
+                            style={{
+                              width: "100%",
+                              maxWidth: "36px",
+                              height: `${heightPercent}%`,
+                              background: "linear-gradient(180deg, #ff7b00 0%, #e85d04 100%)",
+                              borderRadius: "6px 6px 0 0",
+                              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                              boxShadow: "0 4px 6px -1px rgba(232, 93, 4, 0.2)",
+                              cursor: "pointer",
+                            }}
+                            title={`${entry.label}: ${formatCurrency(entry.amount)}`}
+                          />
+
+                          <span
+                            style={{
+                              marginTop: "0.5rem",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              color: "var(--color-text-muted, #64748b)",
+                            }}
+                          >
+                            {entry.label}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -312,25 +391,25 @@ export function ReportsView() {
               ) : (
                 <div className="reports-scroll-wrapper card-table-wrapper">
                   <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Platillo</th>
-                      <th>Cant.</th>
-                      <th>Ingresos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metrics.topDishes.map((dish, i) => (
-                      <tr key={dish.name}>
-                        <td>{i + 1}</td>
-                        <td>{dish.name}</td>
-                        <td>{dish.quantity}</td>
-                        <td>{formatCurrency(dish.revenue)}</td>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Platillo</th>
+                        <th>Cant.</th>
+                        <th>Ingresos</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {metrics.topDishes.map((dish, i) => (
+                        <tr key={dish.name}>
+                          <td>{i + 1}</td>
+                          <td>{dish.name}</td>
+                          <td>{dish.quantity}</td>
+                          <td>{formatCurrency(dish.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

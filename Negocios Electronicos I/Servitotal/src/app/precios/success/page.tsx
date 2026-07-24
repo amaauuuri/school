@@ -10,7 +10,7 @@ import { PublicLayout } from "@/components/layout/PublicLayout";
 function SuccessPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   
   const [status, setStatus] = useState<"loading" | "activating" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
@@ -51,6 +51,22 @@ function SuccessPageContent() {
           planId: planId,
         });
 
+        // 📧 ENVÍO DEL CORREO DE BIENVENIDA / CONFIRMACIÓN
+        try {
+          await fetch("/api/send-welcome", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: user!.email,
+              name: profile?.name || "Administrador",
+              planName: planId.toUpperCase(),
+            }),
+          });
+        } catch (mailErr) {
+          console.error("Error al disparar correo de bienvenida:", mailErr);
+          // No bloqueamos el flujo si el correo falla, la cuenta ya quedó activa
+        }
+
         setStatus("success");
 
         // Redirect after a nice delay
@@ -65,7 +81,7 @@ function SuccessPageContent() {
     }
 
     activateSubscription();
-  }, [user, authLoading, sessionId, planId, router]);
+  }, [user, profile, authLoading, sessionId, planId, router]);
 
   return (
     <div style={{
