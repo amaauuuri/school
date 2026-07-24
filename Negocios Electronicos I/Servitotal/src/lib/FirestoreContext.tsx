@@ -89,15 +89,17 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (profile.role === "ADMIN") {
+    setLoadingData(true);
+
+    const { name = "", email = "", restaurantName = "Mi Restaurante", role } = profile;
+
+    if (role === "ADMIN") {
       initRestaurantIfNeeded(restaurantId, {
-        name: profile.name,
-        email: profile.email,
-        restaurantName: profile.restaurantName,
+        name,
+        email,
+        restaurantName,
       }).catch(console.error);
     }
-
-    setLoadingData(true);
 
     const unsubs: Array<() => void> = [];
 
@@ -112,13 +114,14 @@ export function FirestoreProvider({ children }: { children: React.ReactNode }) {
 
     unsubs.push(subscribeActiveOrders(restaurantId, setActiveOrders));
 
-    if (profile.role === "ADMIN") {
+    if (role === "ADMIN") {
       unsubs.push(subscribeTodaySales(restaurantId, setSalesHistory));
     }
 
     return () => unsubs.forEach((u) => u());
   }, [restaurantId, profile?.role, user?.uid]);
 
+  
   // ─── Actions (memoized, bound to restaurantId) ──────────────────────────────
 
   const addMenuItem = useCallback(

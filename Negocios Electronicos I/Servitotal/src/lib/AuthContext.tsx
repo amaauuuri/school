@@ -78,19 +78,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-// Dentro de tu AuthContext / AuthProvider:
+// Reemplazar el useEffect inicial en AuthContext.tsx
+
 useEffect(() => {
-  // 🟢 Retrasamos ligeramente la inicialización de auth para no congelar el render del Hero en móviles
   const timeout = setTimeout(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        try {
+          // 🟢 Cargar el perfil del usuario desde Firestore
+          const docRef = doc(db, "users", firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+          }
+        } catch (error) {
+          console.error("Error al obtener el perfil de Firestore:", error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      }
     });
+
     return () => unsubscribe();
   }, 100);
 
   return () => clearTimeout(timeout);
 }, []);
+
+
   // Standard Email Sign In
   const signIn = async (email: string, password: string) => {
     setLoading(true);
