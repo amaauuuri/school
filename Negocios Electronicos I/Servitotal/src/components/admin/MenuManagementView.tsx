@@ -75,6 +75,10 @@ export function MenuManagementView() {
     loadingData,
   } = useFirestore();
 
+  // Selection states (Bulk delete)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+
   // Create / Edit states
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -102,6 +106,36 @@ export function MenuManagementView() {
   useEffect(() => {
     setLocalCategories(categoriesList);
   }, [restaurantConfig]);
+
+  // Funciones de selección masiva
+  const handleSelectAll = () => {
+    if (selectedIds.length === menu.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(menu.map((item) => item.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  async function handleBulkDeleteConfirm() {
+    if (selectedIds.length === 0) return;
+    setSaving(true);
+    try {
+      await Promise.all(selectedIds.map((id) => deleteMenuItem(id)));
+      setSelectedIds([]);
+      setBulkDeleteModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Error al eliminar los platillos seleccionados.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -154,6 +188,7 @@ export function MenuManagementView() {
     setSaving(true);
     try {
       await deleteMenuItem(deletingItem.id);
+      setSelectedIds((prev) => prev.filter((id) => id !== deletingItem.id));
       setDeleteModalOpen(false);
       setDeletingItem(null);
     } finally {
@@ -310,7 +345,12 @@ export function MenuManagementView() {
     <>
       <div className="page-header">
         <p className="text-muted">{menu.length} platillos en el menú</p>
-        <div className="page-header__actions" style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="page-header__actions" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          {selectedIds.length > 0 && (
+            <Button variant="danger" onClick={() => setBulkDeleteModalOpen(true)}>
+              🗑️ Eliminar ({selectedIds.length})
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setCatModalOpen(true)}>📁 Categorías</Button>
           <Button variant="outline" onClick={() => setImportModalOpen(true)}>🤖 Importar Menú (IA)</Button>
           <Button variant="primary" onClick={openCreate}>+ Agregar platillo</Button>
@@ -320,17 +360,37 @@ export function MenuManagementView() {
       {/* Mobile cards */}
       <div className="menu-admin-cards">
         {menu.map((item) => (
-          <div key={item.id} className="menu-admin-card">
-            <div className="menu-admin-card__header">
-              <div>
+          <div
+            key={item.id}
+            className="menu-admin-card"
+            style={{
+              borderLeft: selectedIds.includes(item.id)
+                ? "4px solid var(--color-primary, #e85d04)"
+                : undefined,
+            }}
+          >
+            <div className="menu-admin-card__header" style={{ alignItems: "flex-start", gap: "0.75rem" }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(item.id)}
+                onChange={() => handleToggleSelect(item.id)}
+                style={{ width: "20px", height: "20px", cursor: "pointer", marginTop: "2px" }}
+                aria-label={`Seleccionar ${item.name}`}
+              />
+              <div style={{ flex: 1 }}>
                 <strong>{item.name}</strong>
                 <div className="text-sm text-muted">{item.description}</div>
               </div>
-              <button type="button" className={`toggle ${item.available ? "toggle--on" : ""}`} onClick={() => toggleAvailability(item)} aria-label="Disponibilidad">
+              <button
+                type="button"
+                className={`toggle ${item.available ? "toggle--on" : ""}`}
+                onClick={() => toggleAvailability(item)}
+                aria-label="Disponibilidad"
+              >
                 <span className="toggle__knob" />
               </button>
             </div>
-            <div className="text-sm" style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <div className="text-sm" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
               <span><strong>{formatCurrency(item.price)}</strong></span>
               <span className="badge badge--neutral" style={{ textTransform: "none" }}>{item.category}</span>
             </div>
@@ -347,6 +407,15 @@ export function MenuManagementView() {
         <table className="data-table">
           <thead>
             <tr>
+              <th style={{ width: "40px", textAlign: "center" }}>
+                <input
+                  type="checkbox"
+                  checked={menu.length > 0 && selectedIds.length === menu.length}
+                  onChange={handleSelectAll}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                  aria-label="Seleccionar todos los platillos"
+                />
+              </th>
               <th>Platillo</th>
               <th>Categoría</th>
               <th>Precio</th>
@@ -356,7 +425,23 @@ export function MenuManagementView() {
           </thead>
           <tbody>
             {menu.map((item) => (
-              <tr key={item.id}>
+              <tr
+                key={item.id}
+                style={{
+                  backgroundColor: selectedIds.includes(item.id)
+                    ? "var(--color-primary-light, #fff4ed)"
+                    : undefined,
+                }}
+              >
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => handleToggleSelect(item.id)}
+                    style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                    aria-label={`Seleccionar ${item.name}`}
+                  />
+                </td>
                 <td>
                   <strong>{item.name}</strong>
                   <div className="text-sm text-muted">{item.description}</div>
@@ -475,6 +560,28 @@ export function MenuManagementView() {
         }
       >
         <p>¿Eliminar <strong>{deletingItem?.name}</strong>? Esta acción no se puede deshacer.</p>
+      </Modal>
+
+      {/* Modal de confirmación para eliminación masiva */}
+      <Modal
+        open={bulkDeleteModalOpen}
+        onClose={() => setBulkDeleteModalOpen(false)}
+        title="Eliminar platillos seleccionados"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setBulkDeleteModalOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleBulkDeleteConfirm} disabled={saving}>
+              {saving ? "Eliminando..." : `Sí, eliminar (${selectedIds.length})`}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          ¿Estás seguro de que deseas eliminar <strong>{selectedIds.length} platillos</strong> seleccionados?
+          Esta acción no se puede deshacer.
+        </p>
       </Modal>
 
       <Modal
