@@ -4,8 +4,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useFirestore } from "@/lib/FirestoreContext";
 import { useAuth, UserProfile } from "@/lib/AuthContext";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { QRCodeSVG } from "qrcode.react";
 
 interface StaffMember extends UserProfile {}
 
@@ -24,6 +25,10 @@ export function RestaurantSettingsView() {
 
   // Límite máximo según la suscripción
   const maxAllowedTables = getMaxTablesByPlan((restaurantConfig as any)?.planId);
+
+  // URL del Menú Digital Público (Usa el slug del restaurante o su UID como fallback)
+  const menuSlug = (restaurantConfig as any)?.slug || profile?.uid || "demo";
+  const publicMenuUrl = `https://servitotal.expando.mx/menu/${menuSlug}`;
 
   // Config form
   const [saved, setSaved] = useState(false);
@@ -49,7 +54,7 @@ export function RestaurantSettingsView() {
         phone: restaurantConfig.phone || "",
         email: restaurantConfig.email || "",
         tableCount: Math.min(maxTables, restaurantConfig.tableCount || 8),
-        taxRate: 0.16, // Always fixed at 16%
+        taxRate: 0.16,
       });
     }
   }, [restaurantConfig]);
@@ -64,11 +69,9 @@ export function RestaurantSettingsView() {
     setReportStatus("");
   
     try {
-      // 1. Obtener el rango de fechas para el mes actual
       const now = new Date();
       const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       
-      // Consulta a sales_history de Firestore del mes actual
       const q = query(
         collection(db, "sales_history"),
         where("restaurantId", "==", profile?.uid),
@@ -86,7 +89,6 @@ export function RestaurantSettingsView() {
         totalSales += data.totalAmount || 0;
         totalTips += data.tip || 0;
   
-        // Calcular más vendidos
         if (Array.isArray(data.items)) {
           data.items.forEach((item: any) => {
             dishCountMap[item.nombre] = (dishCountMap[item.nombre] || 0) + item.cantidad;
@@ -94,7 +96,6 @@ export function RestaurantSettingsView() {
         }
       });
   
-      // Ordenar Top 3 platos
       const topDishes = Object.entries(dishCountMap)
         .map(([name, qty]) => ({ name, qty }))
         .sort((a, b) => b.qty - a.qty)
@@ -102,7 +103,6 @@ export function RestaurantSettingsView() {
   
       const monthName = now.toLocaleString("es-MX", { month: "long", year: "numeric" });
   
-      // 2. Disparar API de correo
       const res = await fetch("/api/send-monthly-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,7 +136,7 @@ export function RestaurantSettingsView() {
       await updateRestaurantConfig({
         ...form,
         tableCount: Math.min(maxAllowedTables, Math.max(1, form.tableCount)),
-        taxRate: 0.16, // Always enforce 16% IVA
+        taxRate: 0.16,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -155,6 +155,7 @@ export function RestaurantSettingsView() {
   const [staffError, setStaffError] = useState("");
   const [staffSuccess, setStaffSuccess] = useState("");
   const [submittingStaff, setSubmittingStaff] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const fetchStaff = async () => {
     if (!profile?.restaurantName) return;
@@ -199,6 +200,27 @@ export function RestaurantSettingsView() {
     }
   }
 
+  async function handleRevokeStaff(uid: string, name: string) {
+    if (!confirm(`¿Estás seguro de que deseas revocar el acceso a ${name}? Ya no podrá ingresar al sistema.`)) {
+      return;
+    }
+
+    setRevokingId(uid);
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, {
+        status: "INACTIVE",
+        restaurantName: "",
+      });
+      await fetchStaff();
+    } catch (err) {
+      console.error("Error al revocar acceso:", err);
+      alert("Hubo un error al revocar el acceso.");
+    } finally {
+      setRevokingId(null);
+    }
+  }
+
   if (loadingData) {
     return (
       <div style={{ padding: "2rem", color: "var(--color-text-muted)", textAlign: "center" }}>
@@ -212,6 +234,7 @@ export function RestaurantSettingsView() {
       {/* Config Form */}
       <form onSubmit={handleSubmit}>
         <div className="grid grid--2">
+          {/* Tarjeta 1: Datos del Negocio */}
           <div className="card">
             <h3 style={{ fontWeight: 600, marginBottom: "1.25rem" }}>Datos del negocio</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -257,6 +280,7 @@ export function RestaurantSettingsView() {
             </div>
           </div>
 
+          {/* Tarjeta 2: Capacidad y Configuración */}
           <div className="card">
             <h3 style={{ fontWeight: 600, marginBottom: "1.25rem" }}>Capacidad y Configuración</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -314,6 +338,30 @@ export function RestaurantSettingsView() {
           )}
         </div>
       </form>
+
+      {/* 📱 TARJETA NUEVA: MENÚ DIGITAL QR */}
+      <div className="card">
+        <h3 style={{ fontWeight: 600, marginBottom: "0.25rem" }}>Menú Digital QR</h3>
+        <p className="text-sm text-muted" style={{ marginBottom: "1.25rem" }}>
+          Código QR generado dinámicamente. Escanéalo con tu celular para consultar la carta digital sincronizada con tu inventario de platillos.
+        </p>
+
+        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ padding: "12px", background: "#ffffff", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: "8px", display: "inline-block" }}>
+            <QRCodeSVG value={publicMenuUrl} size={120} />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1 }}>
+            <span className="text-sm"><strong>Enlace de visualización:</strong></span>
+            <a href={publicMenuUrl} target="_blank" rel="noreferrer" style={{ color: "#e85d04", fontSize: "0.875rem", wordBreak: "break-all" }}>
+              {publicMenuUrl}
+            </a>
+            <p className="text-sm text-muted" style={{ margin: 0 }}>
+              Cualquier cambio realizado en la pestaña <strong>Menú</strong> se reflejará instantáneamente en el código QR.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* TARJETA REPORTE FINANCIERO POR CORREO */}
       <div className="card">
@@ -443,6 +491,7 @@ export function RestaurantSettingsView() {
                   <th style={{ padding: "0.75rem 0.5rem" }}>Correo</th>
                   <th style={{ padding: "0.75rem 0.5rem" }}>Rol</th>
                   <th style={{ padding: "0.75rem 0.5rem" }}>Fecha de alta</th>
+                  <th style={{ padding: "0.75rem 0.5rem", textAlign: "right" }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -455,6 +504,24 @@ export function RestaurantSettingsView() {
                     </td>
                     <td style={{ padding: "0.75rem 0.5rem", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>
                       {new Date(m.createdAt).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" })}
+                    </td>
+                    <td style={{ padding: "0.75rem 0.5rem", textAlign: "right" }}>
+                      <button
+                        onClick={() => handleRevokeStaff(m.uid, m.name)}
+                        disabled={revokingId === m.uid}
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--color-danger, #ef4444)",
+                          color: "var(--color-danger, #ef4444)",
+                          padding: "0.35rem 0.75rem",
+                          borderRadius: "4px",
+                          fontSize: "0.8rem",
+                          cursor: "pointer",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {revokingId === m.uid ? "Revocando..." : "🗑️ Revocar acceso"}
+                      </button>
                     </td>
                   </tr>
                 ))}

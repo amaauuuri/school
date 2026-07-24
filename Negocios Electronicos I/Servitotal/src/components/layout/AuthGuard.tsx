@@ -19,26 +19,41 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   const [cooldown, setCooldown] = useState(0);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  // Redirect if not logged in
+  // 1. Redirigir si no está autenticado
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
-// Redirect to precios if not subscribed (except for STAFF)
-useEffect(() => {
-  if (!loading && user && user.emailVerified && !loadingData && profile) {
-    // Si es STAFF, la suscripción la cubre el dueño del restaurante
-    if (profile.role !== "STAFF") {
-      if (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED") {
-        router.push("/precios");
+  // 2. 🛡️ VERIFICACIÓN DE ACCESO REVOCADO (STATUS INACTIVE)
+  useEffect(() => {
+    if (!loading && user && profile) {
+      const isInactive = (profile as any)?.status === "INACTIVE";
+      const hasNoRestaurant = profile.role === "STAFF" && !profile.restaurantName;
+
+      if (isInactive || hasNoRestaurant) {
+        logout(); // Cierra sesión automáticamente
+        router.push("/login?error=revoked");
       }
     }
-  }
-}, [user, profile, loading, restaurantConfig, loadingData, router]);
+  }, [user, profile, loading, logout, router]);
 
-  // Handle Resend Cooldown timer
+  // 3. Redirigir a precios si no está suscrito (Excepto STAFF)
+  useEffect(() => {
+    if (!loading && user && user.emailVerified && !loadingData && profile) {
+      // Si el acceso ya fue revocado, no intentamos validar suscripción
+      if ((profile as any)?.status === "INACTIVE") return;
+
+      if (profile.role !== "STAFF") {
+        if (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED") {
+          router.push("/precios");
+        }
+      }
+    }
+  }, [user, profile, loading, restaurantConfig, loadingData, router]);
+
+  // Temporizador para el cooldown de reenvío de correo
   useEffect(() => {
     if (cooldown > 0) {
       const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
@@ -46,13 +61,14 @@ useEffect(() => {
     }
   }, [cooldown]);
 
-  // Redirect STAFF users trying to access ADMIN routes
+  // 4. Redirigir si un STAFF intenta entrar a rutas ADMIN
   useEffect(() => {
     if (!loading && user && requireAdmin && profile && profile.role !== "ADMIN") {
       router.push("/dashboard/mesas");
     }
   }, [user, profile, loading, requireAdmin, router]);
 
+  // Renderizado de carga
   if (loading || (user && user.emailVerified && loadingData)) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
@@ -62,15 +78,20 @@ useEffect(() => {
   }
 
   if (!user) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
-// Redirect if not subscribed (ADMIN only)
-if (profile?.role !== "STAFF" && user.emailVerified && (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED")) {
-  return null; // Will redirect in useEffect
-}
+  // Si el perfil está inactivo, bloqueamos el renderizado mientras efectúa el logout
+  if ((profile as any)?.status === "INACTIVE") {
+    return null;
+  }
 
-  // Force Email Verification
+  // Redirigir si no está suscrito (Solo ADMIN)
+  if (profile?.role !== "STAFF" && user.emailVerified && (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED")) {
+    return null;
+  }
+
+  // Vista de verificación de correo forzada
   if (!user.emailVerified) {
     const authCurrentUserVerified = () => {
       return user.emailVerified;
@@ -149,7 +170,7 @@ if (profile?.role !== "STAFF" && user.emailVerified && (!restaurantConfig || (re
     );
   }
 
-  // Block staff from admin layouts
+  // Bloquear a usuarios STAFF en rutas de administrador
   if (requireAdmin && profile && profile.role !== "ADMIN") {
     return null;
   }

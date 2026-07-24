@@ -4,17 +4,24 @@ import { Resend } from "resend";
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.RESEND_API_KEY;
+
     if (!apiKey) {
-      return NextResponse.json({ error: "Falta RESEND_API_KEY" }, { status: 500 });
+      console.error("❌ [API send-monthly-report] Falta la variable RESEND_API_KEY en Hostinger.");
+      return NextResponse.json(
+        { error: "Error de configuración: Falta RESEND_API_KEY en el servidor." },
+        { status: 500 }
+      );
     }
 
     const { email, restaurantName, monthName, totalSales, totalOrders, totalTips, topDishes } = await req.json();
 
     if (!email) {
-      return NextResponse.json({ error: "El correo es obligatorio" }, { status: 400 });
+      return NextResponse.json({ error: "El correo destinatario es obligatorio." }, { status: 400 });
     }
 
     const resend = new Resend(apiKey);
+
+    console.log(`📩 [API send-monthly-report] Intentando enviar correo a: ${email}`);
 
     const data = await resend.emails.send({
       from: "Servitotal <soporte@servitotal.expando.mx>",
@@ -36,17 +43,17 @@ export async function POST(req: Request) {
               <tr>
                 <td style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; width: 30%; text-align: center;">
                   <span style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Ventas Totales</span>
-                  <div style="font-size: 18px; font-weight: bold; color: #10b981; margin-top: 5px;">$${totalSales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #10b981; margin-top: 5px;">$${(totalSales || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</div>
                 </td>
                 <td width="5%"></td>
                 <td style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; width: 30%; text-align: center;">
                   <span style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Comandas</span>
-                  <div style="font-size: 18px; font-weight: bold; color: #1f2937; margin-top: 5px;">${totalOrders}</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #1f2937; margin-top: 5px;">${totalOrders || 0}</div>
                 </td>
                 <td width="5%"></td>
                 <td style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; width: 30%; text-align: center;">
                   <span style="font-size: 12px; color: #6b7280; text-transform: uppercase;">Propinas</span>
-                  <div style="font-size: 18px; font-weight: bold; color: #f59e0b; margin-top: 5px;">$${totalTips.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #f59e0b; margin-top: 5px;">$${(totalTips || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</div>
                 </td>
               </tr>
             </table>
@@ -66,7 +73,7 @@ export async function POST(req: Request) {
             }
 
             <div style="margin-top: 25px; padding: 15px; background-color: #eff6ff; border-radius: 8px; font-size: 13px; color: #1e40af;">
-              💡 <strong>Tip de Operación:</strong> Recuerda que puedes ver el reporte en tiempo real desde tu panel de administración 
+              💡 <strong>Tip de Operación:</strong> Recuerda que puedes ver el reporte en tiempo real desde tu panel de administración.
             </div>
           </div>
 
@@ -78,9 +85,13 @@ export async function POST(req: Request) {
       `,
     });
 
+    console.log("✅ [API send-monthly-report] Respuesta de Resend:", data);
     return NextResponse.json(data);
   } catch (err: any) {
-    console.error("Error al enviar reporte mensual:", err);
-    return NextResponse.json({ error: err?.message || "Error al enviar reporte" }, { status: 500 });
+    console.error("❌ [API send-monthly-report] Error al enviar el reporte:", err);
+    return NextResponse.json(
+      { error: err?.message || "Error interno al enviar el reporte mensual." },
+      { status: 500 }
+    );
   }
 }
