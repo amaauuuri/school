@@ -140,12 +140,16 @@ textarea {
 }
 
 .btn--primary {
-  background: var(--color-primary);
-  color: white;
+  background-color: #d94800 !important; /* Un naranja más profundo e intencional */
+  border-color: #d94800 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
 }
 
-.btn--primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+
+.btn--primary:hover {
+  background-color: #bf3e00 !important;
+  border-color: #bf3e00 !important;
 }
 
 .btn--secondary {
@@ -228,8 +232,9 @@ textarea {
 }
 
 .badge--warning {
-  background: var(--color-warning-light);
-  color: var(--color-warning);
+  background-color: #78350f !important; /* Fondo café/dorado oscuro */
+  color: #fef3c7 !important;           /* Texto amarillo muy claro */
+  font-weight: 700 !important;
 }
 
 .badge--danger {
@@ -1478,9 +1483,9 @@ textarea {
 }
 
 .role-card__badge {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  margin-bottom: 0.5rem;
+  background-color: #1f2937 !important; /* Fondo oscuro */
+  color: #ffffff !important;           /* Texto blanco de alto contraste */
+  font-weight: 600 !important;
 }
 
 .role-card__title {

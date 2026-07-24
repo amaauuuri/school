@@ -165,10 +165,10 @@ export default function HomePage() {
             Proyecto de <strong>Negocios Electrónicos I</strong> en el <strong>ITP</strong>, creado por Zaira y Amauri para digitalizar restaurantes.
           </p>
           <Link href="/nosotros">
-            <Button variant="primary" size="lg" style={{ backgroundColor: "#e85d04", borderColor: "#e85d04" }}>
-              Conoce al equipo
-            </Button>
-          </Link>
+  <Button variant="primary" size="lg" style={{ backgroundColor: "#d94800", borderColor: "#d94800" }}>
+    Conoce al equipo
+  </Button>
+</Link>
         </div>
       </section>
     </PublicLayout>
