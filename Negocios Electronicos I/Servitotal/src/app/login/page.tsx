@@ -25,7 +25,7 @@ export default function LoginPage() {
       }
     }
   }, [user, profile, router]);
-
+  
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");

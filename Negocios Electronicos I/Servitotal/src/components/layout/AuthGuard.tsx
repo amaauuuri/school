@@ -39,20 +39,6 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     }
   }, [user, profile, loading, logout, router]);
 
-  // 3. Redirigir a precios si no está suscrito (Excepto STAFF)
-  useEffect(() => {
-    if (!loading && user && user.emailVerified && !loadingData && profile) {
-      // Si el acceso ya fue revocado, no intentamos validar suscripción
-      if ((profile as any)?.status === "INACTIVE") return;
-
-      if (profile.role !== "STAFF") {
-        if (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED") {
-          router.push("/precios");
-        }
-      }
-    }
-  }, [user, profile, loading, restaurantConfig, loadingData, router]);
-
   // Temporizador para el cooldown de reenvío de correo
   useEffect(() => {
     if (cooldown > 0) {
@@ -61,7 +47,7 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
     }
   }, [cooldown]);
 
-  // 4. Redirigir si un STAFF intenta entrar a rutas ADMIN
+  // 3. Redirigir si un STAFF intenta entrar a rutas ADMIN
   useEffect(() => {
     if (!loading && user && requireAdmin && profile && profile.role !== "ADMIN") {
       router.push("/dashboard/mesas");
@@ -83,11 +69,6 @@ export function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
 
   // Si el perfil está inactivo, bloqueamos el renderizado mientras efectúa el logout
   if ((profile as any)?.status === "INACTIVE") {
-    return null;
-  }
-
-  // Redirigir si no está suscrito (Solo ADMIN)
-  if (profile?.role !== "STAFF" && user.emailVerified && (!restaurantConfig || (restaurantConfig as unknown as Record<string, unknown>).status !== "SUBSCRIBED")) {
     return null;
   }
 

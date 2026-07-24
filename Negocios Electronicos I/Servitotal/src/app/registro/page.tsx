@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/AuthContext";
 function RegistroPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const plan = searchParams.get("plan");
+  const planParam = searchParams.get("plan");
 
   const { user, profile, signUpAdmin, signInWithGoogle } = useAuth();
   
@@ -24,44 +24,39 @@ function RegistroPageContent() {
   const [checkoutTriggered, setCheckoutTriggered] = useState(false);
 
   useEffect(() => {
-    if (user && profile) {
-      if (plan && !checkoutTriggered) {
-        setCheckoutTriggered(true);
-        setLoading(true);
-        
-        // Trigger Stripe Checkout
-        fetch("/api/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planId: plan,
-            userId: user.uid,
-            userEmail: user.email,
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.url) {
-              window.location.href = data.url;
-            } else {
-              setError(data.error || "Error al iniciar Stripe Checkout.");
-              setLoading(false);
-            }
-          })
-          .catch((err) => {
-            console.error(err);
-            setError("Error de red al conectar con Stripe.");
+    // 🟢 En cuanto detecta usuario recién creado, dispara Stripe Checkout Sandbox sin trabas
+    if (user && profile && !checkoutTriggered) {
+      setCheckoutTriggered(true);
+      setLoading(true);
+
+      const targetPlan = planParam || "pro_monthly";
+
+      fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: targetPlan,
+          userId: user.uid,
+          userEmail: user.email,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.url) {
+            // Redirige directamente al entorno de pago de Stripe
+            window.location.href = data.url;
+          } else {
+            setError(data.error || "Error al iniciar Stripe Checkout.");
             setLoading(false);
-          });
-      } else if (!plan) {
-        if (profile.role === "ADMIN") {
-          router.push("/admin/menu");
-        } else {
-          router.push("/dashboard/mesas");
-        }
-      }
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          setError("Error de red al conectar con Stripe.");
+          setLoading(false);
+        });
     }
-  }, [user, profile, plan, checkoutTriggered, router]);
+  }, [user, profile, planParam, checkoutTriggered]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -198,7 +193,7 @@ function RegistroPageContent() {
             </div>
 
             <Button type="submit" variant="primary" block disabled={loading}>
-              {loading ? "Procesando..." : "Crear cuenta y configurar"}
+              {loading ? "Conectando con Stripe..." : "Crear cuenta y pagar con Stripe"}
             </Button>
           </div>
         </form>
