@@ -1,0 +1,106 @@
+#include "BluetoothSerial.h"
+
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run make menuconfig to enable it
+#endif
+
+BluetoothSerial SerialBT;
+
+const int IN1 = 16;
+const int IN2 = 17;
+const int IN3 = 18;
+const int IN4 = 19;
+
+void setup() {
+  Serial.begin(115200);
+
+  SerialBT.begin("Carrito_ESP32");
+  Serial.println("Bluetooth listo. Conéctate a 'Carrito_ESP32'");
+
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  detener();
+}
+
+void loop() {
+  char boton = 0;
+
+  if (SerialBT.available() > 0) {
+    boton = SerialBT.read();
+  }
+  else if (Serial.available() > 0) {
+    boton = Serial.read();
+  }
+
+  if (boton != 0) {
+    switch (boton) {
+      case '1':
+        adelante();
+        Serial.println("Estatus: [ 1 ] ADELANTE (Ambos motores)");
+        break;
+
+      case '2':
+        atras();
+        Serial.println("Estatus: [ 2 ] ATRAS (Ambos motores)");
+        break;
+
+      case '3':
+        derecha();
+        Serial.println("Estatus: [ 3 ] DERECHA");
+        break;
+
+      case '4':
+        izquierda();
+        Serial.println("Estatus: [ 4 ] IZQUIERDA");
+        break;
+
+      case '5':
+        detener();
+        Serial.println("Estatus: [ 5 ] PARO TOTAL");
+        break;
+    }
+  }
+}
+
+
+void adelante() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+void atras() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+}
+
+void derecha() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
+
+void izquierda() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+void detener() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
